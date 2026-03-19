@@ -1,0 +1,78 @@
+/* ======================================
+   NeuroCode — Global Styles
+   ====================================== */
+
+body {
+    font-family: 'Space Grotesk', sans-serif;
+}
+
+/* ---- SPA Page Section Visibility ---- */
+.page-section {
+    display: none;
+}
+
+.page-section.active {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+/* Make the app wrapper fill height when studio is active */
+#page-studio.active {
+    overflow: hidden;
+}
+
+/* ---- Studio page styles ---- */
+.code-glow {
+    text-shadow: 0 0 8px rgba(var(--primary-rgb), 0.3);
+}
+
+.grid-bg {
+    background-image: radial-gradient(circle, rgba(var(--primary-rgb), 1) 1px, transparent 1px);
+    background-size: 30px 30px;
+    opacity: 0.05;
+}
+
+/* ---- Library & Dashboard glass cards ---- */
+.glass-card {
+    background: rgba(var(--surface-dark-rgb), 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(var(--primary-rgb), 0.1);
+    transition: all 0.3s ease;
+}
+
+html:not(.dark) .glass-card {
+    background: rgba(255, 255, 255, 0.7);
+}
+
+.glass-card:hover {
+    background: rgba(var(--primary-rgb), 0.08);
+    border-color: rgba(var(--primary-rgb), 0.3);
+}
+
+/* ---- Dashboard glow button ---- */
+.glow-hover:hover {
+    box-shadow: 0 0 15px rgba(var(--primary-rgb), 0.3);
+}
+
+/* ---- Active nav link indicator ---- */
+.nav-link {
+    transition: color 0.2s ease;
+}
+
+.nav-link.active {
+    color: rgba(var(--primary-rgb), 1) !important;
+    font-weight: 700;
+    border-bottom: 2px solid rgba(var(--primary-rgb), 1);
+    padding-bottom: 0.25rem;
+}
+
+/* ---- Scrollbar hide utility (for category tabs) ---- */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
