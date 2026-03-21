@@ -6,6 +6,21 @@ body {
     font-family: 'Space Grotesk', sans-serif;
 }
 
+/* ---- Retro Pixel Theme ---- */
+body[data-theme="retro-pixel"],
+body[data-theme="retro-pixel"] *:not(.material-symbols-outlined) {
+    font-family: 'VT323', monospace !important;
+    text-transform: uppercase;
+    font-smooth: never;
+    -webkit-font-smoothing: none;
+    letter-spacing: 0.5px;
+}
+
+body[data-theme="retro-pixel"] .material-symbols-outlined {
+    text-transform: none !important;
+    letter-spacing: normal !important;
+}
+
 /* ---- SPA Page Section Visibility ---- */
 .page-section {
     display: none;
