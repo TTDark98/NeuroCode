@@ -8,24 +8,39 @@ document.addEventListener('DOMContentLoaded', () => {
     const pageSections = document.querySelectorAll('.page-section');
 
     function navigateTo(pageName) {
-        // Hide all page sections
-        pageSections.forEach(section => {
-            section.classList.remove('active');
-        });
+        const current = document.querySelector('.page-section.active');
+        const target  = document.getElementById('page-' + pageName);
 
-        // Show the target page
-        const target = document.getElementById('page-' + pageName);
-        if (target) {
-            target.classList.add('active');
-        }
+        if (!target || target === current) return;
 
-        // Update nav link active states
+        // Update nav link active states immediately (feels responsive)
         navLinks.forEach(link => {
             link.classList.remove('active');
             if (link.getAttribute('data-page') === pageName) {
                 link.classList.add('active');
             }
         });
+
+        if (current) {
+            // Play exit animation on the outgoing page
+            current.classList.remove('active');
+            current.classList.add('is-leaving');
+
+            const onLeaveEnd = () => {
+                current.removeEventListener('animationend', onLeaveEnd);
+                current.classList.remove('is-leaving');
+                current.style.display = 'none';
+
+                // Now mount & animate-in the new page
+                target.style.display = '';
+                target.classList.add('active');
+            };
+
+            current.addEventListener('animationend', onLeaveEnd);
+        } else {
+            // No current page — just show the target directly
+            target.classList.add('active');
+        }
     }
 
     // Attach click handlers to all nav links
@@ -59,7 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.setAttribute('data-theme', theme);
 
         // Handle Dark/Light mode toggle for Tailwind
-        if (theme === 'light-minimalist') {
+        if (theme === 'light-minimalist' || theme === 'pink-panther') {
             html.classList.remove('dark');
         } else {
             html.classList.add('dark');
@@ -84,6 +99,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 html.style.setProperty('--bg-dark-rgb', '245, 248, 248');
                 html.style.setProperty('--surface-dark-rgb', '255, 255, 255');
                 html.style.setProperty('--border-dark-rgb', '226, 232, 240');
+                break;
+            case 'pink-panther':
+                html.style.setProperty('--primary-rgb', '236, 72, 153');
+                html.style.setProperty('--bg-dark-rgb', '255, 245, 250');
+                html.style.setProperty('--surface-dark-rgb', '255, 228, 240');
+                html.style.setProperty('--border-dark-rgb', '251, 182, 213');
+                html.style.setProperty('--background-light', '#fff5fa');
                 break;
             default:
                 html.style.setProperty('--primary-rgb', '37, 244, 244');

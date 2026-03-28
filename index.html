@@ -8,6 +8,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap"
         rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Nunito:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet" />
     <link
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
         rel="stylesheet" />
@@ -47,6 +49,7 @@
                             <option value="retro-pixel">Retro Pixel</option>
                             <option value="light-minimalist">Light Minimalist</option>
                             <option value="solarized-hacker">Solarized Hacker</option>
+                            <option value="pink-panther">Pink Panther</option>
                         </select>
                         <button class="notification-btn">
                             <span class="material-symbols-outlined">notifications</span>
@@ -267,7 +270,8 @@
                 <div class="panel-header">
                     <div class="flex items-center gap-4">
                         <div class="panel-header-title">
-                            <span class="material-symbols-outlined text-primary" style="font-size: 0.875rem;">terminal</span>
+                            <span class="material-symbols-outlined text-primary"
+                                style="font-size: 0.875rem;">terminal</span>
                             <span>Editor</span>
                         </div>
                         <div style="height: 1rem; width: 1px; background-color: var(--border-color);"></div>
@@ -279,7 +283,8 @@
                     </div>
                     <div class="flex gap-2">
                         <button class="btn-icon-text">
-                            <span class="material-symbols-outlined" style="font-size: 0.875rem;">content_copy</span> Copy
+                            <span class="material-symbols-outlined" style="font-size: 0.875rem;">content_copy</span>
+                            Copy
                         </button>
                     </div>
                 </div>
@@ -288,23 +293,37 @@
                         1<br />2<br />3<br />4<br />5<br />6<br />7<br />8<br />9<br />10<br />11<br />12<br />13<br />14<br />15<br />16<br />17<br />18<br />19<br />20
                     </div>
                     <div class="code-editor-area">
-                        <span class="text-purple-500 dark:text-purple-400">#include</span> <span class="text-orange-500">&lt;iostream&gt;</span>
+                        <span class="text-purple-500 dark:text-purple-400">#include</span> <span
+                            class="text-orange-500">&lt;iostream&gt;</span>
                         <span class="text-purple-500 dark:text-purple-400">using namespace</span> std;
 
-                        <span class="text-blue-500 dark:text-primary">void</span> <span class="text-yellow-600 dark:text-yellow-400">bubbleSort</span>(<span class="text-blue-500 dark:text-primary">int</span> arr[], <span class="text-blue-500 dark:text-primary">int</span> n) {
-                        <span class="text-purple-500 dark:text-purple-400">for</span> (<span class="text-blue-500 dark:text-primary">int</span> i = <span class="text-orange-500">0</span>; i
+                        <span class="text-blue-500 dark:text-primary">void</span> <span
+                            class="text-yellow-600 dark:text-yellow-400">bubbleSort</span>(<span
+                            class="text-blue-500 dark:text-primary">int</span> arr[], <span
+                            class="text-blue-500 dark:text-primary">int</span> n) {
+                        <span class="text-purple-500 dark:text-purple-400">for</span> (<span
+                            class="text-blue-500 dark:text-primary">int</span> i = <span
+                            class="text-orange-500">0</span>; i
                         &lt; n - <span class="text-orange-500">1</span>; i++) {
-                        <span class="text-slate-600 dark:text-slate-400 dark:text-slate-500">// Track if any swapping occurs</span>
-                        <span class="text-blue-500 dark:text-primary">bool</span> swapped = <span class="text-orange-500">false</span>;
-                        <span class="text-purple-500 dark:text-purple-400">for</span> (<span class="text-blue-500 dark:text-primary">int</span> j = <span class="text-orange-500">0</span>; j
+                        <span class="text-slate-600 dark:text-slate-400 dark:text-slate-500">// Track if any swapping
+                            occurs</span>
+                        <span class="text-blue-500 dark:text-primary">bool</span> swapped = <span
+                            class="text-orange-500">false</span>;
+                        <span class="text-purple-500 dark:text-purple-400">for</span> (<span
+                            class="text-blue-500 dark:text-primary">int</span> j = <span
+                            class="text-orange-500">0</span>; j
                         &lt; n - i - <span class="text-orange-500">1</span>; j++) {
-                        <span class="text-purple-500 dark:text-purple-400">if</span> (arr[j] &gt; arr[j + <span class="text-orange-500">1</span>]) {
-                        <span class="text-yellow-600 dark:text-yellow-400">swap</span>(arr[j], arr[j + <span class="text-orange-500">1</span>]);
+                        <span class="text-purple-500 dark:text-purple-400">if</span> (arr[j] &gt; arr[j + <span
+                            class="text-orange-500">1</span>]) {
+                        <span class="text-yellow-600 dark:text-yellow-400">swap</span>(arr[j], arr[j + <span
+                            class="text-orange-500">1</span>]);
                         swapped = <span class="text-orange-500">true</span>;
-                        <span class="text-slate-600 dark:text-slate-400 dark:text-slate-500">/* Visualizer Trigger */</span>
+                        <span class="text-slate-600 dark:text-slate-400 dark:text-slate-500">/* Visualizer Trigger
+                            */</span>
                         }
                         }
-                        <span class="text-purple-500 dark:text-purple-400">if</span> (!swapped) <span class="text-purple-500 dark:text-purple-400">break</span>;
+                        <span class="text-purple-500 dark:text-purple-400">if</span> (!swapped) <span
+                            class="text-purple-500 dark:text-purple-400">break</span>;
                         }
                         }
                     </div>
@@ -315,7 +334,8 @@
                 <div class="absolute inset-0 grid-bg z-0" style="position: absolute; inset: 0; z-index: 0;"></div>
                 <div class="panel-header" style="z-index: 10;">
                     <div class="panel-header-title">
-                        <span class="material-symbols-outlined text-primary" style="font-size: 0.875rem;">visibility</span>
+                        <span class="material-symbols-outlined text-primary"
+                            style="font-size: 0.875rem;">visibility</span>
                         <span>Visualization</span>
                     </div>
                     <div class="visualizer-legend">
@@ -434,7 +454,8 @@
                     </div>
                     <h1 class="algo-title">Algorithm Library</h1>
                     <p class="algo-subtitle">
-                        Explore our curated collection of high-performance data structures and neural-enhanced algorithms designed for the next generation of computing.
+                        Explore our curated collection of high-performance data structures and neural-enhanced
+                        algorithms designed for the next generation of computing.
                     </p>
                 </div>
                 <div class="flex items-center gap-3">
@@ -472,16 +493,21 @@
                             <span class="badge badge-legacy">O(n²)</span>
                         </div>
                         <p class="card-desc">
-                            A simple comparison-based sorting algorithm that repeatedly steps through the list, compares adjacent elements and swaps them if they are in the wrong order.
+                            A simple comparison-based sorting algorithm that repeatedly steps through the list, compares
+                            adjacent elements and swaps them if they are in the wrong order.
                         </p>
-                        <div class="mt-auto pt-4 flex justify-between items-center" style="border-top: 1px solid color-mix(in srgb, var(--primary) 10%, transparent);">
-                            <div class="flex items-center gap-2" style="color: color-mix(in srgb, var(--primary) 60%, transparent); font-size: 0.75rem;">
+                        <div class="mt-auto pt-4 flex justify-between items-center"
+                            style="border-top: 1px solid color-mix(in srgb, var(--primary) 10%, transparent);">
+                            <div class="flex items-center gap-2"
+                                style="color: color-mix(in srgb, var(--primary) 60%, transparent); font-size: 0.75rem;">
                                 <span class="material-symbols-outlined" style="font-size: 0.875rem;">schedule</span>
                                 <span>Stable</span>
                             </div>
-                            <button class="library-link" data-action-page="studio" style="background: none; border: none; cursor: pointer;">
+                            <button class="library-link" data-action-page="studio"
+                                style="background: none; border: none; cursor: pointer;">
                                 Open Implementation
-                                <span class="material-symbols-outlined" style="font-size: 1.125rem;">arrow_forward</span>
+                                <span class="material-symbols-outlined"
+                                    style="font-size: 1.125rem;">arrow_forward</span>
                             </button>
                         </div>
                     </div>
@@ -497,19 +523,26 @@
                     <div class="card-body flex flex-col flex-1">
                         <div class="card-title-row">
                             <h5 class="card-title">Merge Sort</h5>
-                            <span class="badge badge-stable" style="background-color: color-mix(in srgb, #3b82f6 20%, transparent); color: #60a5fa;">O(n log n)</span>
+                            <span class="badge badge-stable"
+                                style="background-color: color-mix(in srgb, #3b82f6 20%, transparent); color: #60a5fa;">O(n
+                                log n)</span>
                         </div>
                         <p class="card-desc">
-                            An efficient, stable, divide-and-conquer sorting algorithm. It breaks the input array into smaller subarrays until they contain only one element, then merges them.
+                            An efficient, stable, divide-and-conquer sorting algorithm. It breaks the input array into
+                            smaller subarrays until they contain only one element, then merges them.
                         </p>
-                        <div class="mt-auto pt-4 flex justify-between items-center" style="border-top: 1px solid color-mix(in srgb, var(--primary) 10%, transparent);">
-                            <div class="flex items-center gap-2" style="color: color-mix(in srgb, var(--primary) 60%, transparent); font-size: 0.75rem;">
+                        <div class="mt-auto pt-4 flex justify-between items-center"
+                            style="border-top: 1px solid color-mix(in srgb, var(--primary) 10%, transparent);">
+                            <div class="flex items-center gap-2"
+                                style="color: color-mix(in srgb, var(--primary) 60%, transparent); font-size: 0.75rem;">
                                 <span class="material-symbols-outlined" style="font-size: 0.875rem;">database</span>
                                 <span>Divide &amp; Conquer</span>
                             </div>
-                            <button class="library-link" data-action-page="studio" style="background: none; border: none; cursor: pointer;">
+                            <button class="library-link" data-action-page="studio"
+                                style="background: none; border: none; cursor: pointer;">
                                 Open Implementation
-                                <span class="material-symbols-outlined" style="font-size: 1.125rem;">arrow_forward</span>
+                                <span class="material-symbols-outlined"
+                                    style="font-size: 1.125rem;">arrow_forward</span>
                             </button>
                         </div>
                     </div>
@@ -528,16 +561,21 @@
                             <span class="badge badge-legacy">O(log n)</span>
                         </div>
                         <p class="card-desc">
-                            A fast search algorithm for sorted arrays. It works by repeatedly dividing the search interval in half until the target value is found or the interval is empty.
+                            A fast search algorithm for sorted arrays. It works by repeatedly dividing the search
+                            interval in half until the target value is found or the interval is empty.
                         </p>
-                        <div class="mt-auto pt-4 flex justify-between items-center" style="border-top: 1px solid color-mix(in srgb, var(--primary) 10%, transparent);">
-                            <div class="flex items-center gap-2" style="color: color-mix(in srgb, var(--primary) 60%, transparent); font-size: 0.75rem;">
+                        <div class="mt-auto pt-4 flex justify-between items-center"
+                            style="border-top: 1px solid color-mix(in srgb, var(--primary) 10%, transparent);">
+                            <div class="flex items-center gap-2"
+                                style="color: color-mix(in srgb, var(--primary) 60%, transparent); font-size: 0.75rem;">
                                 <span class="material-symbols-outlined" style="font-size: 0.875rem;">flash_on</span>
                                 <span>Efficient Search</span>
                             </div>
-                            <button class="library-link" data-action-page="studio" style="background: none; border: none; cursor: pointer;">
+                            <button class="library-link" data-action-page="studio"
+                                style="background: none; border: none; cursor: pointer;">
                                 Open Implementation
-                                <span class="material-symbols-outlined" style="font-size: 1.125rem;">arrow_forward</span>
+                                <span class="material-symbols-outlined"
+                                    style="font-size: 1.125rem;">arrow_forward</span>
                             </button>
                         </div>
                     </div>
@@ -556,16 +594,21 @@
                             <span class="badge badge-legacy">O(V + E)</span>
                         </div>
                         <p class="card-desc">
-                            An algorithm for traversing or searching tree or graph data structures. It explores as far as possible along each branch before backtracking.
+                            An algorithm for traversing or searching tree or graph data structures. It explores as far
+                            as possible along each branch before backtracking.
                         </p>
-                        <div class="mt-auto pt-4 flex justify-between items-center" style="border-top: 1px solid color-mix(in srgb, var(--primary) 10%, transparent);">
-                            <div class="flex items-center gap-2" style="color: color-mix(in srgb, var(--primary) 60%, transparent); font-size: 0.75rem;">
+                        <div class="mt-auto pt-4 flex justify-between items-center"
+                            style="border-top: 1px solid color-mix(in srgb, var(--primary) 10%, transparent);">
+                            <div class="flex items-center gap-2"
+                                style="color: color-mix(in srgb, var(--primary) 60%, transparent); font-size: 0.75rem;">
                                 <span class="material-symbols-outlined" style="font-size: 0.875rem;">hub</span>
                                 <span>Graph Traversal</span>
                             </div>
-                            <button class="library-link" data-action-page="studio" style="background: none; border: none; cursor: pointer;">
+                            <button class="library-link" data-action-page="studio"
+                                style="background: none; border: none; cursor: pointer;">
                                 Open Implementation
-                                <span class="material-symbols-outlined" style="font-size: 1.125rem;">arrow_forward</span>
+                                <span class="material-symbols-outlined"
+                                    style="font-size: 1.125rem;">arrow_forward</span>
                             </button>
                         </div>
                     </div>
@@ -584,29 +627,37 @@
                             <span class="badge badge-legacy">O(V + E)</span>
                         </div>
                         <p class="card-desc">
-                            Traverses tree or graph structures by exploring all neighbor nodes at the present depth before moving on to nodes at the next depth level.
+                            Traverses tree or graph structures by exploring all neighbor nodes at the present depth
+                            before moving on to nodes at the next depth level.
                         </p>
-                        <div class="mt-auto pt-4 flex justify-between items-center" style="border-top: 1px solid color-mix(in srgb, var(--primary) 10%, transparent);">
-                            <div class="flex items-center gap-2" style="color: color-mix(in srgb, var(--primary) 60%, transparent); font-size: 0.75rem;">
+                        <div class="mt-auto pt-4 flex justify-between items-center"
+                            style="border-top: 1px solid color-mix(in srgb, var(--primary) 10%, transparent);">
+                            <div class="flex items-center gap-2"
+                                style="color: color-mix(in srgb, var(--primary) 60%, transparent); font-size: 0.75rem;">
                                 <span class="material-symbols-outlined" style="font-size: 0.875rem;">grain</span>
                                 <span>Layer Search</span>
                             </div>
-                            <button class="library-link" data-action-page="studio" style="background: none; border: none; cursor: pointer;">
+                            <button class="library-link" data-action-page="studio"
+                                style="background: none; border: none; cursor: pointer;">
                                 Open Implementation
-                                <span class="material-symbols-outlined" style="font-size: 1.125rem;">arrow_forward</span>
+                                <span class="material-symbols-outlined"
+                                    style="font-size: 1.125rem;">arrow_forward</span>
                             </button>
                         </div>
                     </div>
                 </div>
                 <!-- Neural Pathfinding (Coming Soon) -->
-                <div class="glass-card algorithm-card flex flex-col" style="border: 1px dashed color-mix(in srgb, var(--primary) 40%, transparent); background-color: color-mix(in srgb, var(--primary) 5%, transparent);">
-                    <div style="height: 12rem; width: 100%; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 1rem;">
+                <div class="glass-card algorithm-card flex flex-col"
+                    style="border: 1px dashed color-mix(in srgb, var(--primary) 40%, transparent); background-color: color-mix(in srgb, var(--primary) 5%, transparent);">
+                    <div
+                        style="height: 12rem; width: 100%; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 1rem;">
                         <div class="pulse-circle" style="width: 4rem; height: 4rem;">
                             <span class="material-symbols-outlined" style="font-size: 1.875rem;">psychology</span>
                         </div>
                         <p class="text-primary font-medium" style="font-weight: 500;">Coming Soon</p>
                     </div>
-                    <div class="card-body flex flex-col flex-1" style="border-top: 1px solid color-mix(in srgb, var(--primary) 10%, transparent);">
+                    <div class="card-body flex flex-col flex-1"
+                        style="border-top: 1px solid color-mix(in srgb, var(--primary) 10%, transparent);">
                         <h3 class="card-title mb-2" style="font-size: 1.25rem;">Neural Pathfinding</h3>
                         <p class="card-desc" style="font-style: italic;">
                             Developing next-gen AI-driven path optimization using weight-balanced heuristics...
@@ -625,15 +676,19 @@
         </main>
         <!-- Footer -->
         <footer class="app-footer">
-            <div class="max-w-7xl mx-auto flex flex-col justify-between items-center gap-4" style="flex-direction: row; width: 100%;">
+            <div class="max-w-7xl mx-auto flex flex-col justify-between items-center gap-4"
+                style="flex-direction: row; width: 100%;">
                 <div class="flex items-center gap-2">
                     <span class="material-symbols-outlined text-primary text-xl">polymer</span>
                     <span class="footer-text">© 2024 NeuroCode Labs. All neural paths reserved.</span>
                 </div>
                 <div class="flex items-center gap-8">
-                    <a class="text-slate-500 hover:text-primary transition-colors" style="font-size: 0.875rem; text-decoration: none;" href="#">Documentation</a>
-                    <a class="text-slate-500 hover:text-primary transition-colors" style="font-size: 0.875rem; text-decoration: none;" href="#">API Status</a>
-                    <a class="text-slate-500 hover:text-primary transition-colors" style="font-size: 0.875rem; text-decoration: none;" href="#">Security</a>
+                    <a class="text-slate-500 hover:text-primary transition-colors"
+                        style="font-size: 0.875rem; text-decoration: none;" href="#">Documentation</a>
+                    <a class="text-slate-500 hover:text-primary transition-colors"
+                        style="font-size: 0.875rem; text-decoration: none;" href="#">API Status</a>
+                    <a class="text-slate-500 hover:text-primary transition-colors"
+                        style="font-size: 0.875rem; text-decoration: none;" href="#">Security</a>
                 </div>
             </div>
         </footer>
@@ -647,7 +702,8 @@
                     <span class="material-symbols-outlined text-5xl">groups</span>
                 </div>
                 <h2 style="font-size: 1.875rem; font-weight: 700; color: var(--text-color);">Community Hub</h2>
-                <p style="color: var(--text-slate-600); line-height: 1.5;">The community section is coming soon. Connect with fellow developers, share algorithms, and collaborate on neural projects.</p>
+                <p style="color: var(--text-slate-600); line-height: 1.5;">The community section is coming soon. Connect
+                    with fellow developers, share algorithms, and collaborate on neural projects.</p>
             </div>
         </main>
     </div>

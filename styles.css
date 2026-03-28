@@ -257,19 +257,426 @@ body[data-theme="retro-pixel"] .material-symbols-outlined {
     letter-spacing: normal !important;
 }
 
-/* ---- SPA Page Section Visibility ---- */
+/* ---- Pink Panther Theme ---- */
+body[data-theme="pink-panther"],
+body[data-theme="pink-panther"] *:not(.material-symbols-outlined) {
+    font-family: 'Nunito', 'Space Grotesk', sans-serif !important;
+}
+
+body[data-theme="pink-panther"] h1,
+body[data-theme="pink-panther"] h2,
+body[data-theme="pink-panther"] h3,
+body[data-theme="pink-panther"] h4,
+body[data-theme="pink-panther"] h5,
+body[data-theme="pink-panther"] .logo-text {
+    font-family: 'Pacifico', cursive !important;
+    letter-spacing: 0px !important;
+}
+
+/* Background shimmer & hearts pattern in grid-bg */
+body[data-theme="pink-panther"] .grid-bg {
+    background-image:
+        radial-gradient(circle, rgba(236, 72, 153, 0.6) 1px, transparent 1px),
+        radial-gradient(circle, rgba(251, 182, 213, 0.4) 1px, transparent 1px);
+    background-size: 28px 28px, 14px 14px;
+    background-position: 0 0, 7px 7px;
+    opacity: 0.12;
+}
+
+/* Sparkly card hover */
+body[data-theme="pink-panther"] .glass-card {
+    background: rgba(255, 228, 240, 0.75);
+    border-color: rgba(251, 182, 213, 0.5);
+    backdrop-filter: blur(14px);
+    box-shadow: 0 4px 20px rgba(236, 72, 153, 0.08);
+}
+
+body[data-theme="pink-panther"] .glass-card:hover {
+    background: rgba(255, 214, 233, 0.9);
+    border-color: rgba(236, 72, 153, 0.4);
+    box-shadow: 0 8px 30px rgba(236, 72, 153, 0.18);
+    transform: translateY(-2px);
+}
+
+/* Welcome card bubblegum gradient */
+body[data-theme="pink-panther"] .welcome-card {
+    background: linear-gradient(135deg, #fff0f7 0%, #fce4f0 50%, #f9d0e7 100%);
+    border-color: rgba(236, 72, 153, 0.25);
+    box-shadow: 0 8px 32px rgba(236, 72, 153, 0.15);
+}
+
+body[data-theme="pink-panther"] .welcome-card-glow {
+    background: radial-gradient(ellipse, rgba(236, 72, 153, 0.25), rgba(251, 182, 213, 0.1), transparent 70%);
+    filter: blur(30px);
+}
+
+/* Girly primary button */
+body[data-theme="pink-panther"] .btn-primary {
+    background: linear-gradient(135deg, #ec4899, #f472b6);
+    color: #ffffff;
+    box-shadow: 0 4px 15px rgba(236, 72, 153, 0.4);
+    border-radius: 2rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+}
+
+body[data-theme="pink-panther"] .btn-primary:hover {
+    background: linear-gradient(135deg, #db2777, #ec4899);
+    box-shadow: 0 6px 22px rgba(236, 72, 153, 0.5);
+    transform: translateY(-1px);
+    opacity: 1;
+}
+
+/* Logo icon bubble */
+body[data-theme="pink-panther"] .logo-icon {
+    background: linear-gradient(135deg, #ec4899, #f9a8d4);
+    border-radius: 50%;
+    box-shadow: 0 2px 10px rgba(236, 72, 153, 0.35);
+    color: #ffffff;
+}
+
+/* Nav links */
+body[data-theme="pink-panther"] .nav-link {
+    color: #be185d;
+}
+
+body[data-theme="pink-panther"] .nav-link:hover,
+body[data-theme="pink-panther"] .nav-link.active {
+    color: #ec4899;
+    border-bottom-color: #ec4899;
+}
+
+/* Search input */
+body[data-theme="pink-panther"] .search-input {
+    background-color: rgba(255, 228, 240, 0.8);
+    border: 1px solid rgba(251, 182, 213, 0.6);
+    border-radius: 2rem;
+    color: #831843;
+}
+
+body[data-theme="pink-panther"] .search-input::placeholder {
+    color: #f9a8d4;
+}
+
+body[data-theme="pink-panther"] .search-input:focus {
+    box-shadow: 0 0 0 2px rgba(236, 72, 153, 0.3);
+}
+
+/* Theme selector */
+body[data-theme="pink-panther"] .theme-selector {
+    background-color: rgba(255, 228, 240, 0.9);
+    border: 1px solid rgba(251, 182, 213, 0.7);
+    border-radius: 2rem;
+    color: #be185d;
+}
+
+/* Notification button */
+body[data-theme="pink-panther"] .notification-btn {
+    color: #f472b6;
+}
+
+body[data-theme="pink-panther"] .notification-btn:hover {
+    color: #ec4899;
+}
+
+/* User avatar rose ring */
+body[data-theme="pink-panther"] .user-avatar {
+    border: 2px solid #f9a8d4;
+    background: rgba(253, 242, 248, 1);
+    box-shadow: 0 0 12px rgba(236, 72, 153, 0.25);
+}
+
+/* Stat cards */
+body[data-theme="pink-panther"] .stat-label {
+    color: #be185d;
+    font-weight: 700;
+}
+
+body[data-theme="pink-panther"] .stat-value {
+    color: #831843;
+    font-family: 'Pacifico', cursive !important;
+}
+
+body[data-theme="pink-panther"] .text-primary {
+    color: #ec4899 !important;
+}
+
+body[data-theme="pink-panther"] .progress-bar-container {
+    background-color: rgba(251, 182, 213, 0.3);
+}
+
+/* Badges with pink coat */
+body[data-theme="pink-panther"] .badge-stable {
+    background-color: rgba(236, 72, 153, 0.15);
+    color: #be185d;
+}
+
+body[data-theme="pink-panther"] .badge-beta {
+    background-color: rgba(244, 114, 182, 0.2);
+    color: #db2777;
+}
+
+body[data-theme="pink-panther"] .badge-legacy {
+    background-color: rgba(251, 207, 232, 0.6);
+    color: #9d174d;
+}
+
+/* Section titles */
+body[data-theme="pink-panther"] .section-title {
+    color: #9d174d;
+}
+
+body[data-theme="pink-panther"] .view-all-link {
+    color: #ec4899;
+    font-weight: 700;
+}
+
+/* Action cards */
+body[data-theme="pink-panther"] .action-icon-wrapper {
+    background: linear-gradient(135deg, rgba(236, 72, 153, 0.15), rgba(249, 168, 212, 0.2));
+    color: #ec4899;
+    border-radius: 50%;
+}
+
+body[data-theme="pink-panther"] .action-title {
+    color: #831843;
+}
+
+body[data-theme="pink-panther"] .action-desc {
+    color: #be185d;
+    opacity: 0.75;
+}
+
+body[data-theme="pink-panther"] .action-card:hover {
+    border-color: rgba(236, 72, 153, 0.5);
+}
+
+/* Algorithm library hero */
+body[data-theme="pink-panther"] .algo-title {
+    background: linear-gradient(135deg, #ec4899, #f43f5e, #a855f7);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+body[data-theme="pink-panther"] .algo-subtitle {
+    color: #be185d;
+}
+
+body[data-theme="pink-panther"] .badge-neural {
+    background: rgba(253, 242, 248, 0.9);
+    border-color: rgba(249, 168, 212, 0.7);
+    color: #db2777;
+}
+
+/* Tab buttons */
+body[data-theme="pink-panther"] .tab-btn {
+    color: #be185d;
+    border-radius: 2rem;
+    border-color: rgba(249, 168, 212, 0.5);
+}
+
+body[data-theme="pink-panther"] .tab-btn.active,
+body[data-theme="pink-panther"] .tab-btn:hover {
+    background: linear-gradient(135deg, #ec4899, #f472b6);
+    color: #ffffff;
+    border-color: transparent;
+    box-shadow: 0 4px 12px rgba(236, 72, 153, 0.3);
+}
+
+/* Load more button */
+body[data-theme="pink-panther"] .load-more-btn {
+    border-color: rgba(236, 72, 153, 0.4);
+    color: #ec4899;
+    border-radius: 2rem;
+}
+
+body[data-theme="pink-panther"] .load-more-btn:hover {
+    background: linear-gradient(135deg, rgba(236, 72, 153, 0.08), rgba(249, 168, 212, 0.12));
+    border-color: #ec4899;
+}
+
+/* Library link */
+body[data-theme="pink-panther"] .library-link {
+    color: #ec4899;
+    font-weight: 700;
+}
+
+body[data-theme="pink-panther"] .library-link:hover {
+    color: #db2777;
+}
+
+/* Studio panels */
+body[data-theme="pink-panther"] .studio-panel-left {
+    background: linear-gradient(160deg, #fff5fa 0%, #fce4f0 100%);
+    border-right-color: rgba(251, 182, 213, 0.5);
+}
+
+body[data-theme="pink-panther"] .studio-panel-right {
+    background: linear-gradient(160deg, #fdf2f8 0%, #fce7f3 100%);
+}
+
+body[data-theme="pink-panther"] .panel-header {
+    background: rgba(255, 228, 240, 0.85);
+    border-bottom-color: rgba(251, 182, 213, 0.4);
+    backdrop-filter: blur(8px);
+}
+
+body[data-theme="pink-panther"] .panel-header-title {
+    color: #be185d;
+}
+
+/* Code editor area */
+body[data-theme="pink-panther"] .code-editor-area {
+    color: #831843;
+}
+
+body[data-theme="pink-panther"] .line-numbers {
+    color: #f9a8d4;
+    border-right-color: rgba(249, 168, 212, 0.3);
+}
+
+/* Visualizer bars — pink shimmer */
+body[data-theme="pink-panther"] .vis-bar-primary {
+    background: linear-gradient(to top, #ec4899, #f9a8d4);
+    box-shadow: 0 0 12px rgba(236, 72, 153, 0.4);
+}
+
+body[data-theme="pink-panther"] .vis-bar-compare {
+    background: linear-gradient(to top, #a855f7, #d8b4fe);
+    box-shadow: 0 0 12px rgba(168, 85, 247, 0.4);
+}
+
+/* Studio footer */
+body[data-theme="pink-panther"] .studio-footer {
+    background: rgba(255, 228, 240, 0.9);
+    border-top-color: rgba(251, 182, 213, 0.4);
+    backdrop-filter: blur(8px);
+}
+
+body[data-theme="pink-panther"] .timeline-track {
+    background: rgba(251, 182, 213, 0.3);
+}
+
+body[data-theme="pink-panther"] .timeline-progress {
+    background: linear-gradient(to right, #ec4899, #f472b6);
+}
+
+body[data-theme="pink-panther"] .btn-play {
+    background: linear-gradient(135deg, #ec4899, #f472b6);
+    box-shadow: 0 4px 18px rgba(236, 72, 153, 0.4);
+    color: #ffffff;
+}
+
+body[data-theme="pink-panther"] .btn-play:hover {
+    background: linear-gradient(135deg, #db2777, #ec4899);
+    box-shadow: 0 6px 24px rgba(236, 72, 153, 0.55);
+}
+
+body[data-theme="pink-panther"] .btn-control {
+    color: #be185d;
+    border-color: rgba(251, 182, 213, 0.5);
+}
+
+body[data-theme="pink-panther"] .btn-control:hover {
+    background: rgba(253, 242, 248, 0.8);
+    color: #ec4899;
+}
+
+body[data-theme="pink-panther"] .speed-slider::-webkit-slider-thumb {
+    background: #ec4899;
+}
+
+body[data-theme="pink-panther"] .speed-slider::-webkit-slider-runnable-track {
+    background: rgba(251, 182, 213, 0.5);
+}
+
+body[data-theme="pink-panther"] .btn-export {
+    border-color: rgba(236, 72, 153, 0.4);
+    color: #ec4899;
+    border-radius: 2rem;
+}
+
+body[data-theme="pink-panther"] .btn-export:hover {
+    background: rgba(253, 242, 248, 0.8);
+    border-color: #ec4899;
+}
+
+/* Community pulse circle */
+body[data-theme="pink-panther"] .pulse-circle {
+    background: rgba(253, 242, 248, 0.8);
+    border-color: rgba(249, 168, 212, 0.5);
+    color: #ec4899;
+    box-shadow: 0 0 0 8px rgba(236, 72, 153, 0.08), 0 0 0 16px rgba(236, 72, 153, 0.04);
+}
+
+/* Footer */
+body[data-theme="pink-panther"] .app-footer {
+    background: rgba(255, 228, 240, 0.7);
+    border-top-color: rgba(251, 182, 213, 0.4);
+}
+
+body[data-theme="pink-panther"] .footer-text {
+    color: #be185d;
+}
+
+body[data-theme="pink-panther"] .glow-hover:hover {
+    box-shadow: 0 0 20px rgba(236, 72, 153, 0.45) !important;
+}
+
+/* Header backdrop */
+body[data-theme="pink-panther"] .app-header {
+    border-bottom-color: rgba(251, 182, 213, 0.5);
+    background-color: rgba(255, 245, 250, 0.85);
+}
+
+/* ---- SPA Page Section Visibility & Transitions ---- */
+@keyframes page-in {
+    from {
+        opacity: 0;
+        transform: translateY(14px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes page-out {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+}
+
 .page-section {
     display: none;
+    pointer-events: none;
 }
 
 .page-section.active {
     display: flex;
     flex-direction: column;
     flex: 1;
+    pointer-events: auto;
+    animation: page-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.page-section.is-leaving {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    pointer-events: none;
+    animation: page-out 0.2s ease-in both;
 }
 
 /* Make the app wrapper fill height when studio is active */
-#page-studio.active {
+#page-studio.active,
+#page-studio.is-leaving {
     overflow: hidden;
 }
 
