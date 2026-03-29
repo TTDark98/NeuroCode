@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function applyTheme(theme) {
         document.body.setAttribute('data-theme', theme);
 
-        if (theme === 'light-minimalist' || theme === 'pink-panther') {
+        if (theme === 'light-minimalist' || theme === 'neuro-blush') {
             html.classList.remove('dark');
         } else {
             html.classList.add('dark');
@@ -109,7 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 html.style.setProperty('--surface-dark-rgb', '255, 255, 255');
                 html.style.setProperty('--border-dark-rgb', '226, 232, 240');
                 break;
-            case 'pink-panther':
+            case 'neuro-blush':
                 html.style.setProperty('--primary-rgb', '236, 72, 153');
                 html.style.setProperty('--bg-dark-rgb', '255, 245, 250');
                 html.style.setProperty('--surface-dark-rgb', '255, 228, 240');
