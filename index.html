@@ -4,7 +4,9 @@
 <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>NeuroCode | Dashboard</title>
+    <title>NeuroCode | Algorithm Visualization Platform</title>
+    <meta name="description"
+        content="NeuroCode — Interactive algorithm visualization platform. Visualize sorting, searching, and graph algorithms step by step with smooth animations." />
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap"
         rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet" />
@@ -49,7 +51,7 @@
                             <option value="retro-pixel">Retro Pixel</option>
                             <option value="light-minimalist">Light Minimalist</option>
                             <option value="solarized-hacker">Solarized Hacker</option>
-                            <option value="pink-panther">Pink Panther</option>
+                            <option value="neuro-blush">Neuro Blush</option>
                         </select>
                         <button class="notification-btn">
                             <span class="material-symbols-outlined">notifications</span>
@@ -78,7 +80,7 @@
                         <p class="welcome-desc">Your neural network simulations are processed and ready. You have 3
                             pending optimizations in the 'Quantum-Sort' project.</p>
                     </div>
-                    <button class="btn-primary glow-hover">
+                    <button class="btn-primary glow-hover" data-action-page="studio">
                         <span class="material-symbols-outlined">bolt</span>
                         Resume Project
                     </button>
@@ -91,10 +93,10 @@
                         <span class="stat-label">Algorithms Created</span>
                         <span class="material-symbols-outlined text-primary">terminal</span>
                     </div>
-                    <div class="stat-value">128</div>
+                    <div class="stat-value" id="stat-algo-count">0</div>
                     <div class="stat-trend trend-up">
                         <span class="material-symbols-outlined text-xs">trending_up</span>
-                        +12% this month
+                        Saved locally
                     </div>
                 </div>
                 <div class="glass-card stat-card">
@@ -121,9 +123,9 @@
                         <span class="stat-label">Storage Used</span>
                         <span class="material-symbols-outlined text-primary">database</span>
                     </div>
-                    <div class="stat-value">0%</div>
+                    <div class="stat-value" id="stat-storage-value">0%</div>
                     <div class="progress-bar-container">
-                        <div class="progress-bar-fill" style="width: 0%"></div>
+                        <div class="progress-bar-fill" id="stat-storage-bar" style="width: 0%"></div>
                     </div>
                 </div>
             </div>
@@ -163,7 +165,7 @@
                 </h3>
                 <a class="view-all-link" href="#" data-action-page="algorithms">View All</a>
             </div>
-            <div class="algorithms-grid">
+            <div class="algorithms-grid" id="recent-algorithms">
                 <!-- Item 1 -->
                 <div class="glass-card algorithm-card">
                     <div class="card-image-wrapper">
@@ -275,57 +277,70 @@
                             <span>Editor</span>
                         </div>
                         <div style="height: 1rem; width: 1px; background-color: var(--border-color);"></div>
-                        <select class="code-select">
-                            <option>BubbleSort.cpp</option>
-                            <option>QuickSort.java</option>
-                            <option>BinaryTree.py</option>
+                        <select class="code-select" id="code-file-select">
+                            <option value="BubbleSort.cpp">BubbleSort.cpp</option>
+                            <option value="SelectionSort.cpp">SelectionSort.cpp</option>
+                            <option value="MergeSort.cpp">MergeSort.cpp</option>
+                            <option value="BinarySearch.cpp">BinarySearch.cpp</option>
+                            <option value="BFS.cpp">BFS.cpp</option>
+                            <option value="DFS.cpp">DFS.cpp</option>
                         </select>
                     </div>
                     <div class="flex gap-2">
-                        <button class="btn-icon-text">
+                        <button class="btn-icon-text" id="btn-copy-code">
                             <span class="material-symbols-outlined" style="font-size: 0.875rem;">content_copy</span>
                             Copy
                         </button>
+                        <button class="btn-run" id="btn-run-algorithm">
+                            <span class="material-symbols-outlined" style="font-size: 0.875rem;">play_arrow</span>
+                            Run
+                        </button>
                     </div>
                 </div>
+                <!-- Code Editor with textarea + syntax highlight overlay -->
                 <div class="code-container">
-                    <div class="line-numbers">
+                    <div class="line-numbers" id="line-numbers">
                         1<br />2<br />3<br />4<br />5<br />6<br />7<br />8<br />9<br />10<br />11<br />12<br />13<br />14<br />15<br />16<br />17<br />18<br />19<br />20
                     </div>
-                    <div class="code-editor-area">
-                        <span class="text-purple-500 dark:text-purple-400">#include</span> <span
-                            class="text-orange-500">&lt;iostream&gt;</span>
-                        <span class="text-purple-500 dark:text-purple-400">using namespace</span> std;
-
-                        <span class="text-blue-500 dark:text-primary">void</span> <span
-                            class="text-yellow-600 dark:text-yellow-400">bubbleSort</span>(<span
-                            class="text-blue-500 dark:text-primary">int</span> arr[], <span
-                            class="text-blue-500 dark:text-primary">int</span> n) {
-                        <span class="text-purple-500 dark:text-purple-400">for</span> (<span
-                            class="text-blue-500 dark:text-primary">int</span> i = <span
-                            class="text-orange-500">0</span>; i
-                        &lt; n - <span class="text-orange-500">1</span>; i++) {
-                        <span class="text-slate-600 dark:text-slate-400 dark:text-slate-500">// Track if any swapping
-                            occurs</span>
-                        <span class="text-blue-500 dark:text-primary">bool</span> swapped = <span
-                            class="text-orange-500">false</span>;
-                        <span class="text-purple-500 dark:text-purple-400">for</span> (<span
-                            class="text-blue-500 dark:text-primary">int</span> j = <span
-                            class="text-orange-500">0</span>; j
-                        &lt; n - i - <span class="text-orange-500">1</span>; j++) {
-                        <span class="text-purple-500 dark:text-purple-400">if</span> (arr[j] &gt; arr[j + <span
-                            class="text-orange-500">1</span>]) {
-                        <span class="text-yellow-600 dark:text-yellow-400">swap</span>(arr[j], arr[j + <span
-                            class="text-orange-500">1</span>]);
-                        swapped = <span class="text-orange-500">true</span>;
-                        <span class="text-slate-600 dark:text-slate-400 dark:text-slate-500">/* Visualizer Trigger
-                            */</span>
-                        }
-                        }
-                        <span class="text-purple-500 dark:text-purple-400">if</span> (!swapped) <span
-                            class="text-purple-500 dark:text-purple-400">break</span>;
-                        }
-                        }
+                    <div class="code-editor-wrapper">
+                        <pre class="code-highlight-overlay" id="code-highlight"></pre>
+                        <textarea class="code-textarea" id="code-editor" spellcheck="false" autocomplete="off"
+                            autocorrect="off" autocapitalize="off" wrap="off">void bubbleSort(int arr[], int n) {
+    for (int i = 0; i < n - 1; i++) {
+        bool swapped = false;
+        for (int j = 0; j < n - i - 1; j++) {
+            if (arr[j] > arr[j + 1]) {
+                swap(arr[j], arr[j + 1]);
+                swapped = true;
+            }
+        }
+        if (!swapped) break;
+    }
+}</textarea>
+                    </div>
+                </div>
+                <!-- Playground Input -->
+                <div class="playground-section">
+                    <div class="playground-header">
+                        <div class="panel-header-title">
+                            <span class="material-symbols-outlined text-primary"
+                                style="font-size: 0.875rem;">input</span>
+                            <span id="playground-label">Array Values</span>
+                        </div>
+                        <button class="btn-save-sm" id="btn-save-project">
+                            <span class="material-symbols-outlined" style="font-size: 0.875rem;">save</span>
+                            Save
+                        </button>
+                    </div>
+                    <div class="playground-inputs">
+                        <input type="text" class="playground-input" id="playground-input"
+                            placeholder="Enter array values: 45, 12, 56, 32, 8, 41"
+                            value="45, 12, 56, 32, 8, 41, 28, 63" />
+                        <div class="search-target-group" id="search-target-group" style="display: none;">
+                            <label class="playground-input-label">Target</label>
+                            <input type="number" class="playground-input playground-input-sm" id="search-target-input"
+                                placeholder="Target value" value="32" />
+                        </div>
                     </div>
                 </div>
             </section>
@@ -338,37 +353,26 @@
                             style="font-size: 0.875rem;">visibility</span>
                         <span>Visualization</span>
                     </div>
-                    <div class="visualizer-legend">
-                        <div class="legend-box legend-primary"></div> Current
-                        <div class="legend-box legend-purple"></div> Comparing
+                    <div class="flex items-center gap-3">
+                        <div class="visualizer-legend">
+                            <div class="legend-box legend-primary"></div> Current
+                            <div class="legend-box legend-purple"></div> Comparing
+                        </div>
+                        <button class="btn-icon-text" id="btn-assistant-toggle" title="AI Assistant">
+                            <span class="material-symbols-outlined" style="font-size: 1rem;">smart_toy</span>
+                            AI
+                        </button>
                     </div>
                 </div>
-                <!-- Canvas with Abstract Bars -->
-                <div class="visualizer-canvas">
-                    <div class="vis-bar vis-bar-primary" style="height: 8rem;">
-                        <div class="vis-label text-primary">12</div>
-                    </div>
-                    <div class="vis-bar vis-bar-primary" style="height: 16rem;">
-                        <div class="vis-label text-primary">45</div>
-                    </div>
-                    <div class="vis-bar vis-bar-compare" style="height: 12rem;">
-                        <div class="vis-label text-purple-400">32</div>
-                    </div>
-                    <div class="vis-bar vis-bar-compare" style="height: 18rem;">
-                        <div class="vis-label text-purple-400">56</div>
-                    </div>
-                    <div class="vis-bar vis-bar-primary" style="height: 5rem;">
-                        <div class="vis-label text-primary">8</div>
-                    </div>
-                    <div class="vis-bar vis-bar-primary" style="height: 14rem;">
-                        <div class="vis-label text-primary">41</div>
-                    </div>
-                    <div class="vis-bar vis-bar-primary" style="height: 10rem;">
-                        <div class="vis-label text-primary">28</div>
-                    </div>
-                    <div class="vis-bar vis-bar-primary" style="height: 20rem;">
-                        <div class="vis-label text-primary">63</div>
-                    </div>
+                <!-- Canvas — bars / graph rendered here by visualizer.js -->
+                <div class="visualizer-canvas" id="visualizer-canvas">
+                    <!-- bars get rendered dynamically -->
+                </div>
+                <!-- Step Description -->
+                <div class="step-description-bar" id="step-description-container">
+                    <span class="material-symbols-outlined"
+                        style="font-size: 0.875rem; color: var(--primary);">info</span>
+                    <span id="step-description">Click "Run" to start the visualization.</span>
                 </div>
                 <!-- Floating Info Card -->
                 <div class="floating-info-card">
@@ -376,15 +380,19 @@
                     <div class="space-y-2">
                         <div class="info-row">
                             <span class="info-label">Swaps</span>
-                            <span class="info-value text-primary">24</span>
+                            <span class="info-value text-primary" id="info-swaps">0</span>
                         </div>
                         <div class="info-row">
                             <span class="info-label">Comparisons</span>
-                            <span class="info-value text-primary">112</span>
+                            <span class="info-value text-primary" id="info-comparisons">0</span>
                         </div>
                         <div class="info-row">
                             <span class="info-label">Time Complexity</span>
-                            <span class="info-value text-yellow-600 dark:text-yellow-400">O(n²)</span>
+                            <span class="info-value text-yellow-600 dark:text-yellow-400" id="info-complexity">—</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Space Complexity</span>
+                            <span class="info-value text-yellow-600 dark:text-yellow-400" id="info-space">—</span>
                         </div>
                     </div>
                 </div>
@@ -395,28 +403,28 @@
             <!-- Timeline Progress -->
             <div class="timeline-container">
                 <div class="timeline-labels">
-                    <span>Step 42 / 128</span>
-                    <span>Time: 00:12.4</span>
+                    <span id="timeline-step">Step 0 / 0</span>
+                    <span id="timeline-time">Time: 00:00.0</span>
                 </div>
                 <div class="timeline-track">
-                    <div class="timeline-progress" style="width: 32%;"></div>
+                    <div class="timeline-progress" id="timeline-progress" style="width: 0%;"></div>
                 </div>
             </div>
             <!-- Media Controls -->
             <div class="player-controls">
-                <button class="btn-control">
+                <button class="btn-control" id="btn-skip-start" title="Skip to start">
                     <span class="material-symbols-outlined">skip_previous</span>
                 </button>
-                <button class="btn-control">
-                    <span class="material-symbols-outlined">step</span>
+                <button class="btn-control" id="btn-step-back" title="Step back">
+                    <span class="material-symbols-outlined">undo</span>
                 </button>
-                <button class="btn-play">
+                <button class="btn-play" id="btn-play-pause" title="Play / Pause">
                     <span class="material-symbols-outlined text-3xl font-bold">play_arrow</span>
                 </button>
-                <button class="btn-control">
-                    <span class="material-symbols-outlined">step</span>
+                <button class="btn-control" id="btn-step-forward" title="Step forward">
+                    <span class="material-symbols-outlined">redo</span>
                 </button>
-                <button class="btn-control">
+                <button class="btn-control" id="btn-skip-end" title="Skip to end">
                     <span class="material-symbols-outlined">skip_next</span>
                 </button>
             </div>
@@ -427,9 +435,9 @@
                         <span class="material-symbols-outlined" style="font-size: 0.75rem;">speed</span>
                         <span>Execution Speed</span>
                     </div>
-                    <span class="text-primary">1.5x</span>
+                    <span class="text-primary" id="speed-value">1.5x</span>
                 </div>
-                <input class="speed-slider" max="4" min="0.5" step="0.5" type="range" value="1.5" />
+                <input class="speed-slider" id="speed-slider" max="4" min="0.5" step="0.5" type="range" value="1.5" />
             </div>
             <div style="display: flex; align-items: center; gap: 0.5rem;">
                 <button class="btn-export">
@@ -463,7 +471,8 @@
                         <span class="material-symbols-outlined" style="font-size: 1.25rem;">filter_list</span>
                         <span>Filter</span>
                     </button>
-                    <button class="btn-primary" style="padding: 0.5rem 1rem; font-size: 0.875rem;">
+                    <button class="btn-primary" style="padding: 0.5rem 1rem; font-size: 0.875rem;"
+                        data-action-page="studio">
                         <span class="material-symbols-outlined" style="font-size: 1.25rem;">add</span>
                         <span>New Algorithm</span>
                     </button>
@@ -480,7 +489,7 @@
             <!-- Algorithm Grid -->
             <div class="algorithms-grid">
                 <!-- Bubble Sort -->
-                <div class="glass-card algorithm-card flex flex-col">
+                <div class="glass-card algorithm-card flex flex-col" data-algorithm="bubbleSort">
                     <div class="card-image-wrapper">
                         <div class="card-gradient-primary" style="position: absolute; inset: 0;"></div>
                         <div class="card-icon-bg">
@@ -512,8 +521,41 @@
                         </div>
                     </div>
                 </div>
+                <!-- Selection Sort -->
+                <div class="glass-card algorithm-card flex flex-col" data-algorithm="selectionSort">
+                    <div class="card-image-wrapper">
+                        <div class="card-gradient-orange" style="position: absolute; inset: 0;"></div>
+                        <div class="card-icon-bg">
+                            <span class="material-symbols-outlined text-orange-400">low_priority</span>
+                        </div>
+                    </div>
+                    <div class="card-body flex flex-col flex-1">
+                        <div class="card-title-row">
+                            <h5 class="card-title">Selection Sort</h5>
+                            <span class="badge badge-legacy">O(n²)</span>
+                        </div>
+                        <p class="card-desc">
+                            Finds the minimum element from the unsorted portion and places it at the beginning. Repeats
+                            for each position.
+                        </p>
+                        <div class="mt-auto pt-4 flex justify-between items-center"
+                            style="border-top: 1px solid color-mix(in srgb, var(--primary) 10%, transparent);">
+                            <div class="flex items-center gap-2"
+                                style="color: color-mix(in srgb, var(--primary) 60%, transparent); font-size: 0.75rem;">
+                                <span class="material-symbols-outlined" style="font-size: 0.875rem;">swap_vert</span>
+                                <span>In-Place</span>
+                            </div>
+                            <button class="library-link" data-action-page="studio"
+                                style="background: none; border: none; cursor: pointer;">
+                                Open Implementation
+                                <span class="material-symbols-outlined"
+                                    style="font-size: 1.125rem;">arrow_forward</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
                 <!-- Merge Sort -->
-                <div class="glass-card algorithm-card flex flex-col">
+                <div class="glass-card algorithm-card flex flex-col" data-algorithm="mergeSort">
                     <div class="card-image-wrapper">
                         <div class="card-gradient-blue" style="position: absolute; inset: 0;"></div>
                         <div class="card-icon-bg">
@@ -548,7 +590,7 @@
                     </div>
                 </div>
                 <!-- Binary Search -->
-                <div class="glass-card algorithm-card flex flex-col">
+                <div class="glass-card algorithm-card flex flex-col" data-algorithm="binarySearch">
                     <div class="card-image-wrapper">
                         <div class="card-gradient-purple" style="position: absolute; inset: 0;"></div>
                         <div class="card-icon-bg">
@@ -581,7 +623,7 @@
                     </div>
                 </div>
                 <!-- Depth First Search -->
-                <div class="glass-card algorithm-card flex flex-col">
+                <div class="glass-card algorithm-card flex flex-col" data-algorithm="dfs">
                     <div class="card-image-wrapper">
                         <div class="card-gradient-orange" style="position: absolute; inset: 0;"></div>
                         <div class="card-icon-bg">
@@ -614,7 +656,7 @@
                     </div>
                 </div>
                 <!-- Breadth First Search -->
-                <div class="glass-card algorithm-card flex flex-col">
+                <div class="glass-card algorithm-card flex flex-col" data-algorithm="bfs">
                     <div class="card-image-wrapper">
                         <div class="card-gradient-primary" style="position: absolute; inset: 0;"></div>
                         <div class="card-icon-bg">
@@ -671,7 +713,7 @@
                     <span class="material-symbols-outlined">expand_more</span>
                     Load More Algorithms
                 </button>
-                <p style="color: var(--text-slate-500); font-size: 0.875rem;">Showing 5 of 124 neural algorithms</p>
+                <p style="color: var(--text-slate-500); font-size: 0.875rem;">Showing 6 of 124 neural algorithms</p>
             </div>
         </main>
         <!-- Footer -->
@@ -708,7 +750,29 @@
         </main>
     </div>
 
-    <script src="app.js"></script>
+    <!-- ========== AI ASSISTANT PANEL ========== -->
+    <div class="ai-assistant-panel" id="ai-assistant-panel">
+        <div class="assistant-header">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary" style="font-size: 1.25rem;">smart_toy</span>
+                <span class="assistant-title">NeuroCode AI</span>
+            </div>
+            <button class="btn-assistant-close" id="btn-assistant-close">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="assistant-chat-body" id="assistant-chat-body">
+            <!-- Messages rendered dynamically -->
+        </div>
+        <div class="assistant-input-area">
+            <input type="text" class="assistant-input" id="assistant-input" placeholder="Ask about algorithms..." />
+            <button class="btn-assistant-send" id="btn-assistant-send">
+                <span class="material-symbols-outlined">send</span>
+            </button>
+        </div>
+    </div>
+
+    <script type="module" src="js/main.js"></script>
 </body>
 
 </html>
