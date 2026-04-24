@@ -631,6 +631,11 @@ body[data-theme="neuro-blush"] .app-header {
 }
 
 /* ---- SPA Page Section Visibility & Transitions ---- */
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
 @keyframes page-in {
     from {
         opacity: 0;
@@ -1310,18 +1315,25 @@ html.dark .panel-header-title {
 }
 
 .code-select {
-    background-color: transparent;
-    border: none;
+    background-color: var(--surface-dark, #1a2a2a);
+    border: 1px solid var(--border-color, #333);
+    border-radius: 4px;
     font-size: 0.75rem;
     font-weight: 500;
     color: var(--primary);
     cursor: pointer;
-    padding: 0;
-    padding-right: 1.5rem;
+    padding: 0.25rem 0.5rem;
+    min-width: 120px;
+}
+
+.code-select option {
+    background-color: var(--surface-dark, #1a2a2a);
+    color: var(--primary);
+    padding: 0.25rem 0.5rem;
 }
 
 .code-select:focus {
-    outline: none;
+    outline: 1px solid var(--primary);
 }
 
 .btn-icon-text {
@@ -1490,15 +1502,53 @@ html.dark .visualizer-legend {
 .floating-info-card {
     position: absolute;
     top: 4rem;
-    right: 1.5rem;
+    right: 0;
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     padding: 1rem;
     background-color: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(12px);
-    border-radius: 0.75rem;
+    border-radius: 0.75rem 0 0 0.75rem;
     border: 1px solid color-mix(in srgb, var(--primary) 20%, transparent);
+    border-right: none;
     z-index: 10;
     width: 12rem;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    box-shadow: -10px 10px 30px -12px rgba(0, 0, 0, 0.25);
+}
+
+.floating-info-card.sidebar-open {
+    transform: translateX(0);
+}
+
+.stats-toggle-btn {
+    position: absolute;
+    left: -2rem;
+    top: 1rem;
+    width: 2rem;
+    height: 3rem;
+    background-color: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(12px);
+    border: 1px solid color-mix(in srgb, var(--primary) 20%, transparent);
+    border-right: none;
+    border-radius: 0.5rem 0 0 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary);
+    cursor: pointer;
+}
+
+html.dark .stats-toggle-btn {
+    background-color: color-mix(in srgb, var(--surface-dark) 80%, transparent);
+}
+
+.stats-toggle-btn .material-symbols-outlined {
+    font-size: 1.5rem;
+    transition: transform 0.3s ease;
+}
+
+.floating-info-card.sidebar-open .stats-toggle-btn .material-symbols-outlined {
+    transform: rotate(180deg);
 }
 
 html.dark .floating-info-card {

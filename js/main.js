@@ -11,6 +11,7 @@ import Player from './player.js';
 import Parser from './parser.js';
 import Storage from './storage.js';
 import Assistant from './assistant.js';
+import AIGenerator from './ai-generator.js';
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -149,7 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const codeTextarea = document.getElementById('code-editor');
     const codeHighlight = document.getElementById('code-highlight');
     const lineNumbersEl = document.getElementById('line-numbers');
-    const codeSelect = document.querySelector('.code-select');
+    const codeSelect = document.getElementById('code-file-select');
 
     /**
      * Update syntax highlighting and line numbers
@@ -189,8 +190,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Update code selector display
         if (codeSelect) {
-            const ext = algo.type === 'graph' ? '.cpp' : '.cpp';
-            codeSelect.value = algo.name.replace(/\s/g, '') + ext;
+            const reverseMapping = {
+                'bubbleSort': 'BubbleSort.cpp',
+                'selectionSort': 'SelectionSort.cpp',
+                'mergeSort': 'MergeSort.cpp',
+                'binarySearch': 'BinarySearch.cpp',
+                'bfs': 'BFS.cpp',
+                'dfs': 'DFS.cpp',
+            };
+            codeSelect.value = reverseMapping[algorithmKey] || 'new';
         }
 
         // Load default data into playground
@@ -228,6 +236,28 @@ document.addEventListener('DOMContentLoaded', () => {
     if (codeSelect) {
         codeSelect.addEventListener('change', () => {
             const val = codeSelect.value;
+            
+            if (val === 'new') {
+                if (codeTextarea) {
+                    codeTextarea.value = '';
+                    updateCodeDisplay();
+                }
+                if (playgroundInput) {
+                    playgroundInput.value = '';
+                    if (playgroundLabel) playgroundLabel.textContent = 'Custom Input';
+                }
+                const searchTargetGroup = document.getElementById('search-target-group');
+                if (searchTargetGroup) searchTargetGroup.style.display = 'none';
+                
+                StateStore.set('currentAlgorithm', null);
+                StateStore.set('steps', []);
+                
+                const canvasEl = document.getElementById('visualizer-canvas');
+                if (canvasEl) canvasEl.innerHTML = '';
+                
+                return;
+            }
+
             // Map select options to algorithm keys
             const mapping = {
                 'BubbleSort.cpp': 'bubbleSort',
@@ -292,14 +322,133 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ═══════════════════════════════════════
+    // AI MODEL SELECTOR
+    // ═══════════════════════════════════════
+    const aiModelSelect = document.getElementById('ai-model-select');
+    const aiApiKeyInput = document.getElementById('ai-api-key');
+    const aiProviderSelect = document.getElementById('ai-provider-select');
+    const aiOllamaUrlInput = document.getElementById('ai-ollama-url');
+
+    function updateProviderUI() {
+        const prov = AIGenerator.getProvider();
+        if (aiApiKeyInput) aiApiKeyInput.style.display = prov === 'gemini' ? 'block' : 'none';
+        if (aiOllamaUrlInput) aiOllamaUrlInput.style.display = prov === 'ollama' ? 'block' : 'none';
+    }
+
+    // Provider toggle
+    if (aiProviderSelect) {
+        aiProviderSelect.value = AIGenerator.getProvider();
+        aiProviderSelect.addEventListener('change', () => {
+            AIGenerator.setProvider(aiProviderSelect.value);
+            updateProviderUI();
+            initAiModelDropdown();
+        });
+    }
+
+    // Ollama URL
+    if (aiOllamaUrlInput) {
+        aiOllamaUrlInput.value = AIGenerator.getOllamaUrl();
+        aiOllamaUrlInput.addEventListener('change', () => {
+            AIGenerator.setOllamaUrl(aiOllamaUrlInput.value.trim());
+            initAiModelDropdown();
+        });
+    }
+
+    // Gemini API key
+    if (aiApiKeyInput) {
+        aiApiKeyInput.value = AIGenerator.getApiKey() || '';
+        aiApiKeyInput.addEventListener('change', () => {
+            if (aiApiKeyInput.value.trim() !== '') {
+                initAiModelDropdown();
+            }
+        });
+    }
+
+    async function initAiModelDropdown() {
+        if (!aiModelSelect) return;
+
+        const prov = AIGenerator.getProvider();
+        if (prov === 'gemini' && !AIGenerator.getApiKey()) return;
+
+        aiModelSelect.innerHTML = '<option value="">Loading...</option>';
+
+        try {
+            const models = await AIGenerator.fetchAvailableModels();
+            if (models.length > 0) {
+                aiModelSelect.innerHTML = '';
+                const currentModel = AIGenerator.getModel();
+
+                models.forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = m;
+                    opt.textContent = m;
+                    if (m === currentModel) opt.selected = true;
+                    aiModelSelect.appendChild(opt);
+                });
+
+                // If current model wasn't in the list, select the first one
+                if (!models.includes(currentModel) && models.length > 0) {
+                    AIGenerator.setModel(models[0]);
+                }
+            } else {
+                aiModelSelect.innerHTML = '<option value="">No models found</option>';
+            }
+        } catch (e) {
+            console.error("Failed to init AI models:", e);
+            aiModelSelect.innerHTML = '<option value="">Error loading</option>';
+        }
+    }
+
+    if (aiModelSelect) {
+        aiModelSelect.addEventListener('change', () => {
+            AIGenerator.setModel(aiModelSelect.value);
+            showToast(`AI Model set to ${aiModelSelect.value}`);
+        });
+    }
+
+    // Initialize on load
+    updateProviderUI();
+    initAiModelDropdown();
+
+    // ═══════════════════════════════════════
     // RUN / VISUALIZE BUTTON
     // ═══════════════════════════════════════
     const btnRun = document.getElementById('btn-run-algorithm');
     const btnSave = document.getElementById('btn-save-project');
+    const btnAiGenerate = document.getElementById('btn-ai-generate');
 
     if (btnRun) {
         btnRun.addEventListener('click', () => {
             runCurrentAlgorithm();
+        });
+    }
+
+    if (btnAiGenerate) {
+        btnAiGenerate.addEventListener('click', async () => {
+            if (!codeTextarea || !codeTextarea.value.trim()) {
+                showToast('Please enter some code first!');
+                return;
+            }
+
+            const codeStr = codeTextarea.value;
+            const inputStr = playgroundInput ? playgroundInput.value : '';
+
+            // Loading state
+            const originalHtml = btnAiGenerate.innerHTML;
+            btnAiGenerate.innerHTML = `<span class="material-symbols-outlined spin" style="font-size: 0.875rem; animation: spin 1s linear infinite;">autorenew</span> Generating...`;
+            btnAiGenerate.disabled = true;
+
+            try {
+                const algoKey = await AIGenerator.generateVisualization(codeStr, inputStr);
+                StateStore.set('currentAlgorithm', algoKey);
+                runCurrentAlgorithm();
+                showToast('AI Visualization Generated Successfully!');
+            } catch (err) {
+                showToast(err.message || 'Error generating visualization.');
+            } finally {
+                btnAiGenerate.innerHTML = originalHtml;
+                btnAiGenerate.disabled = false;
+            }
         });
     }
 
@@ -584,6 +733,17 @@ document.addEventListener('DOMContentLoaded', () => {
             toast.classList.remove('toast-show');
             setTimeout(() => toast.remove(), 300);
         }, 2500);
+    }
+
+    // ═══════════════════════════════════════
+    // STATS SIDEBAR TOGGLE
+    // ═══════════════════════════════════════
+    const btnStatsToggle = document.getElementById('btn-stats-toggle');
+    const statsSidebar = document.getElementById('stats-sidebar');
+    if (btnStatsToggle && statsSidebar) {
+        btnStatsToggle.addEventListener('click', () => {
+            statsSidebar.classList.toggle('sidebar-open');
+        });
     }
 
     // ═══════════════════════════════════════

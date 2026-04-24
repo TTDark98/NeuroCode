@@ -741,6 +741,11 @@ export function runAlgorithm(algorithmKey, inputData, extraArgs) {
         return null;
     }
 
+    // AI-generated algorithms use 'run' instead of 'fn'
+    if (typeof algo.run === 'function') {
+        return algo.run(inputData, extraArgs);
+    }
+
     if (algo.type === 'graph') {
         return algo.fn(inputData, extraArgs || 0);
     } else if (algo.type === 'searching') {

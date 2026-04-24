@@ -269,31 +269,52 @@
         <main class="studio-main">
             <!-- Left Panel: Code Editor -->
             <section class="studio-panel studio-panel-left">
-                <div class="panel-header">
-                    <div class="flex items-center gap-4">
-                        <div class="panel-header-title">
-                            <span class="material-symbols-outlined text-primary"
-                                style="font-size: 0.875rem;">terminal</span>
-                            <span>Editor</span>
+                <div class="panel-header" style="flex-direction: column; gap: 0.5rem; align-items: stretch;">
+                    <!-- Row 1: Editor + File Select + Copy/Run -->
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div class="flex items-center gap-4">
+                            <div class="panel-header-title">
+                                <span class="material-symbols-outlined text-primary"
+                                    style="font-size: 0.875rem;">terminal</span>
+                                <span>Editor</span>
+                            </div>
+                            <div style="height: 1rem; width: 1px; background-color: var(--border-color);"></div>
+                            <select class="code-select" id="code-file-select">
+                                <option value="new">-- New Code --</option>
+                                <option value="BubbleSort.cpp">BubbleSort.cpp</option>
+                                <option value="SelectionSort.cpp">SelectionSort.cpp</option>
+                                <option value="MergeSort.cpp">MergeSort.cpp</option>
+                                <option value="BinarySearch.cpp">BinarySearch.cpp</option>
+                                <option value="BFS.cpp">BFS.cpp</option>
+                                <option value="DFS.cpp">DFS.cpp</option>
+                            </select>
                         </div>
-                        <div style="height: 1rem; width: 1px; background-color: var(--border-color);"></div>
-                        <select class="code-select" id="code-file-select">
-                            <option value="BubbleSort.cpp">BubbleSort.cpp</option>
-                            <option value="SelectionSort.cpp">SelectionSort.cpp</option>
-                            <option value="MergeSort.cpp">MergeSort.cpp</option>
-                            <option value="BinarySearch.cpp">BinarySearch.cpp</option>
-                            <option value="BFS.cpp">BFS.cpp</option>
-                            <option value="DFS.cpp">DFS.cpp</option>
-                        </select>
+                        <div class="flex gap-2">
+                            <button class="btn-icon-text" id="btn-copy-code">
+                                <span class="material-symbols-outlined" style="font-size: 0.875rem;">content_copy</span>
+                                Copy
+                            </button>
+                            <button class="btn-run" id="btn-run-algorithm">
+                                <span class="material-symbols-outlined" style="font-size: 0.875rem;">play_arrow</span>
+                                Run
+                            </button>
+                        </div>
                     </div>
-                    <div class="flex gap-2">
-                        <button class="btn-icon-text" id="btn-copy-code">
-                            <span class="material-symbols-outlined" style="font-size: 0.875rem;">content_copy</span>
-                            Copy
-                        </button>
-                        <button class="btn-run" id="btn-run-algorithm">
-                            <span class="material-symbols-outlined" style="font-size: 0.875rem;">play_arrow</span>
-                            Run
+                    <!-- Row 2: AI Controls -->
+                    <div style="display: flex; align-items: center; gap: 0.5rem; padding-top: 0.4rem; border-top: 1px solid var(--border-color); flex-wrap: wrap;">
+                        <span class="material-symbols-outlined" style="font-size: 0.875rem; color: var(--primary);">auto_awesome</span>
+                        <select class="code-select" id="ai-provider-select" style="min-width: 80px;" title="Select AI Provider">
+                            <option value="ollama">Ollama</option>
+                            <option value="gemini">Gemini</option>
+                        </select>
+                        <input type="text" id="ai-ollama-url" placeholder="http://localhost:11434" title="Ollama Base URL" style="background-color: transparent; border: 1px solid var(--border-color); border-radius: 4px; padding: 0.25rem 0.5rem; color: var(--text-color); font-size: 0.7rem; width: 140px;">
+                        <input type="password" id="ai-api-key" placeholder="Gemini API Key" title="Enter your Gemini API Key" style="background-color: transparent; border: 1px solid var(--border-color); border-radius: 4px; padding: 0.25rem 0.5rem; color: var(--text-color); font-size: 0.7rem; width: 120px; display: none;">
+                        <select class="code-select" id="ai-model-select" style="min-width: 140px;" title="Select AI Model">
+                            <option value="">Loading models...</option>
+                        </select>
+                        <button class="btn-icon-text" id="btn-ai-generate" title="Generate Visualization with AI" style="color: var(--primary); border: 1px solid var(--primary); border-radius: 4px; padding: 0.2rem 0.5rem;">
+                            <span class="material-symbols-outlined" style="font-size: 0.875rem;">auto_awesome</span>
+                            AI Generate
                         </button>
                     </div>
                 </div>
@@ -375,7 +396,10 @@
                     <span id="step-description">Click "Run" to start the visualization.</span>
                 </div>
                 <!-- Floating Info Card -->
-                <div class="floating-info-card">
+                <div class="floating-info-card" id="stats-sidebar">
+                    <button class="stats-toggle-btn" id="btn-stats-toggle">
+                        <span class="material-symbols-outlined">chevron_left</span>
+                    </button>
                     <p class="info-card-title">Algorithm Stats</p>
                     <div class="space-y-2">
                         <div class="info-row">
