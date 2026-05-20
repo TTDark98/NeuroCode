@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>NeuroCode | Algorithm Visualization Platform</title>
+    <meta name="description"
+        content="NeuroCode — Interactive algorithm visualization platform. Visualize sorting, searching, and graph algorithms step by step with smooth animations." />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap"
+        rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Nunito:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body class="app-body">
+
+    <!-- ========== SHARED TOP NAVIGATION ========== -->
+    <header class="app-header">
+        <div class="header-container">
+            <div class="header-content">
+                <!-- Logo & Nav -->
+                <div class="header-left">
+                    <div class="logo-group group" data-action-page="dashboard">
+                        <div class="logo-icon">
+                            <span class="material-symbols-outlined font-bold">polyline</span>
+                        </div>
+                        <h2 class="logo-text">NeuroCode</h2>
+                    </div>
+                    <nav class="main-nav" id="main-nav">
+                        <a class="nav-link" href="#" data-page="dashboard">Dashboard</a>
+                        <a class="nav-link" href="#" data-page="studio">Studio</a>
+                        <a class="nav-link" href="#" data-page="algorithms">Algorithms</a>
+                        <a class="nav-link" href="#" data-page="community">Community</a>
+                    </nav>
+                </div>
+                <!-- Actions -->
+                <div class="header-right">
+                    <div class="search-box">
+                        <span class="material-symbols-outlined search-icon">search</span>
+                        <input class="search-input" placeholder="Search algorithms..." type="text" />
+                    </div>
+                    <div class="header-actions">
+                        <select class="theme-selector" id="theme-selector">
+                            <option value="dark-futuristic">Dark Futuristic</option>
+                            <option value="retro-pixel">Retro Pixel</option>
+                            <option value="light-minimalist">Light Minimalist</option>
+                            <option value="solarized-hacker">Solarized Hacker</option>
+                            <option value="neuro-blush">Neuro Blush</option>
+                        </select>
+                        <button class="notification-btn">
+                            <span class="material-symbols-outlined">notifications</span>
+                        </button>
+                    </div>
+                    <div class="auth-container" id="auth-container" style="display: flex; align-items: center; gap: 1rem; position: relative;">
+                        <button class="btn-primary" id="btn-show-login" style="padding: 0.5rem 1.25rem; font-size: 0.875rem; border-radius: 2rem;">Login</button>
+                        <div id="user-profile-menu" style="display: none; align-items: center; gap: 0.75rem; cursor: pointer;">
+                            <div class="user-avatar" id="profile-avatar-btn" style="display: flex; align-items: center; justify-content: center; color: var(--primary); font-weight: bold;" title="Open Profile">
+                                <span id="logged-in-initial">U</span>
+                            </div>
+                            <span id="logged-in-username" style="font-weight: 600; color: var(--text-color);">User</span>
+                        </div>
+
+                        <!-- Profile Dropdown -->
+                        <div id="profile-dropdown" style="display: none; position: absolute; top: calc(100% + 12px); right: 0; width: 380px; background-color: var(--surface-color); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); z-index: 999; padding: 0; overflow: hidden;">
+                            <!-- Header -->
+                            <div style="background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.15), rgba(var(--primary-rgb), 0.05)); padding: 1.25rem; border-bottom: 1px solid var(--border-color);">
+                                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                    <div style="width: 40px; height: 40px; border-radius: 50%; background: rgba(var(--primary-rgb), 0.2); border: 2px solid var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--primary); font-size: 1.1rem;">
+                                        <span id="dropdown-user-initial">U</span>
+                                    </div>
+                                    <div>
+                                        <div id="dropdown-user-email" style="font-weight: 600; color: var(--text-color); font-size: 0.9rem;">user@email.com</div>
+                                        <div style="font-size: 0.75rem; color: var(--text-slate-500);">NeuroCode Pro</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- API Keys Section -->
+                            <div style="padding: 1.25rem;">
+                                <div style="font-size: 0.8rem; font-weight: 600; color: var(--text-slate-500); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.75rem;">
+                                    <span class="material-symbols-outlined" style="font-size: 0.9rem; vertical-align: middle;">key</span>
+                                    API Keys
+                                </div>
+
+                                <!-- Gemini -->
+                                <div style="margin-bottom: 0.75rem;">
+                                    <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; color: var(--text-slate-400); margin-bottom: 0.3rem;">
+                                        <span class="material-symbols-outlined" style="color: #4285F4; font-size: 1rem;">auto_awesome</span> Gemini API Key
+                                    </label>
+                                    <div style="display: flex; gap: 0.5rem;">
+                                        <input type="password" id="dropdown-gemini-key" placeholder="Paste Gemini key..." style="flex: 1; background-color: color-mix(in srgb, var(--bg-color) 60%, transparent); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.5rem 0.6rem; color: var(--text-color); font-size: 0.8rem;" />
+                                        <button class="btn-primary" id="btn-dropdown-save-gemini" style="padding: 0.4rem 0.75rem; font-size: 0.75rem; border-radius: 6px; white-space: nowrap;">Save</button>
+                                    </div>
+                                    <span id="dropdown-gemini-status" style="font-size: 0.7rem; color: var(--text-slate-500); margin-top: 0.2rem; display: inline-block;">Not set</span>
+                                </div>
+
+                                <!-- NVIDIA -->
+                                <div>
+                                    <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; color: var(--text-slate-400); margin-bottom: 0.3rem;">
+                                        <span class="material-symbols-outlined" style="color: #76B900; font-size: 1rem;">memory</span> NVIDIA API Key
+                                    </label>
+                                    <div style="display: flex; gap: 0.5rem;">
+                                        <input type="password" id="dropdown-nvidia-key" placeholder="Paste NVIDIA key..." style="flex: 1; background-color: color-mix(in srgb, var(--bg-color) 60%, transparent); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.5rem 0.6rem; color: var(--text-color); font-size: 0.8rem;" />
+                                        <button class="btn-primary" id="btn-dropdown-save-nvidia" style="padding: 0.4rem 0.75rem; font-size: 0.75rem; border-radius: 6px; white-space: nowrap;">Save</button>
+                                    </div>
+                                    <span id="dropdown-nvidia-status" style="font-size: 0.7rem; color: var(--text-slate-500); margin-top: 0.2rem; display: inline-block;">Not set</span>
+                                </div>
+                            </div>
+
+                            <!-- Footer -->
+                            <div style="padding: 0.75rem 1.25rem; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end;">
+                                <button id="btn-logout" style="display: flex; align-items: center; gap: 0.4rem; background: none; border: none; color: #ef4444; cursor: pointer; font-size: 0.85rem; font-weight: 600; padding: 0.4rem 0.75rem; border-radius: 6px; transition: background 0.2s;">
+                                    <span class="material-symbols-outlined" style="font-size: 1rem;">logout</span> Logout
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ============================================================ -->
+    <!-- PAGE: DASHBOARD                                              -->
+    <!-- ============================================================ -->
+    <div id="page-dashboard" class="page-section flex-1">
+        <main class="dashboard-main">
+            <!-- Welcome Card -->
+            <div class="welcome-card">
+                <div class="welcome-card-glow"></div>
+                <div class="welcome-card-content">
+                    <div class="welcome-text">
+                        <h1 class="welcome-title">Welcome back, Developer.</h1>
+                        <p class="welcome-desc">Your neural network simulations are processed and ready. You have 3
+                            pending optimizations in the 'Quantum-Sort' project.</p>
+                    </div>
+                    <button class="btn-primary glow-hover" data-action-page="studio">
+                        <span class="material-symbols-outlined">bolt</span>
+                        Resume Project
+                    </button>
+                </div>
+            </div>
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <div class="glass-card stat-card">
+                    <div class="stat-header">
+                        <span class="stat-label">Algorithms Created</span>
+                        <span class="material-symbols-outlined text-primary">terminal</span>
+                    </div>
+                    <div class="stat-value" id="stat-algo-count">0</div>
+                    <div class="stat-trend trend-up">
+                        <span class="material-symbols-outlined text-xs">trending_up</span>
+                        Saved locally
+                    </div>
+                </div>
+                <div class="glass-card stat-card">
+                    <div class="stat-header">
+                        <span class="stat-label">Visualizations Run</span>
+                        <span class="material-symbols-outlined text-primary">monitoring</span>
+                    </div>
+                    <div class="stat-value">1,402</div>
+                    <div class="stat-trend trend-up">
+                        <span class="material-symbols-outlined text-xs">trending_up</span>
+                        +5.4% this week
+                    </div>
+                </div>
+                <div class="glass-card stat-card">
+                    <div class="stat-header">
+                        <span class="stat-label">Active Nodes</span>
+                        <span class="material-symbols-outlined text-primary">hub</span>
+                    </div>
+                    <div class="stat-value">42</div>
+                    <div class="stat-subtext">All systems operational</div>
+                </div>
+                <div class="glass-card stat-card">
+                    <div class="stat-header">
+                        <span class="stat-label">Storage Used</span>
+                        <span class="material-symbols-outlined text-primary">database</span>
+                    </div>
+                    <div class="stat-value" id="stat-storage-value">0%</div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill" id="stat-storage-bar" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- Quick Actions -->
+            <h3 class="section-title">
+                <span class="material-symbols-outlined text-primary">dynamic_form</span>
+                Quick Actions
+            </h3>
+            <div class="actions-grid">
+                <a class="glass-card action-card" href="#" data-action-page="studio">
+                    <div class="action-icon-wrapper">
+                        <span class="material-symbols-outlined" style="font-size: 1.875rem;">add_box</span>
+                    </div>
+                    <h4 class="action-title">Create Algorithm</h4>
+                    <p class="action-desc">Initialize a new neural architecture or logic script.</p>
+                </a>
+                <a class="glass-card action-card" href="#" data-action-page="studio">
+                    <div class="action-icon-wrapper">
+                        <span class="material-symbols-outlined" style="font-size: 1.875rem;">visibility</span>
+                    </div>
+                    <h4 class="action-title">Open Visualizer</h4>
+                    <p class="action-desc">Transform data streams into 3D neural mappings.</p>
+                </a>
+                <a class="glass-card action-card" href="#" data-action-page="algorithms">
+                    <div class="action-icon-wrapper">
+                        <span class="material-symbols-outlined" style="font-size: 1.875rem;">library_books</span>
+                    </div>
+                    <h4 class="action-title">Browse Library</h4>
+                    <p class="action-desc">Access thousands of community-built modules.</p>
+                </a>
+            </div>
+            <div class="section-header">
+                <h3 class="section-title" style="margin-bottom: 0;">
+                    <span class="material-symbols-outlined text-primary">history</span>
+                    My Execution History
+                </h3>
+                <button class="btn-icon-text" id="btn-refresh-history">
+                    <span class="material-symbols-outlined" style="font-size: 1rem;">refresh</span>
+                </button>
+            </div>
+            <div id="execution-history-list" style="margin-bottom: 2rem; color: var(--text-slate-500); font-size: 0.875rem; max-height: 300px; overflow-y: auto; background-color: var(--surface-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem;">
+                Please login to view your execution history.
+            </div>
+
+            <!-- API Key Management -->
+            <div class="section-header">
+                <h3 class="section-title" style="margin-bottom: 0;">
+                    <span class="material-symbols-outlined text-primary">key</span>
+                    My API Keys
+                </h3>
+            </div>
+            <div id="api-keys-panel" style="margin-bottom: 2rem; background-color: var(--surface-color); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem;">
+                <div id="api-keys-login-msg" style="color: var(--text-slate-500); font-size: 0.875rem;">
+                    Please login to manage your API keys.
+                </div>
+                <div id="api-keys-form" style="display: none;">
+                    <p style="color: var(--text-slate-500); font-size: 0.8rem; margin-bottom: 1rem;">Your API keys are encrypted and stored securely in the backend. They are loaded automatically when you log in.</p>
+                    
+                    <!-- Gemini Key -->
+                    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; min-width: 120px;">
+                            <span class="material-symbols-outlined" style="color: #4285F4; font-size: 1.25rem;">auto_awesome</span>
+                            <span style="font-weight: 600; color: var(--text-color); font-size: 0.9rem;">Gemini</span>
+                        </div>
+                        <input type="password" id="dash-gemini-key" placeholder="Enter your Gemini API Key" style="flex: 1; min-width: 200px; background-color: color-mix(in srgb, var(--bg-color) 50%, transparent); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.6rem 0.75rem; color: var(--text-color); font-size: 0.85rem;" />
+                        <button class="btn-primary" id="btn-save-gemini-key" style="padding: 0.5rem 1rem; font-size: 0.8rem; border-radius: 8px;">
+                            <span class="material-symbols-outlined" style="font-size: 1rem;">save</span> Save
+                        </button>
+                        <span id="gemini-key-status" style="font-size: 0.75rem; color: var(--text-slate-500);">Not set</span>
+                    </div>
+
+                    <!-- NVIDIA Key -->
+                    <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; min-width: 120px;">
+                            <span class="material-symbols-outlined" style="color: #76B900; font-size: 1.25rem;">memory</span>
+                            <span style="font-weight: 600; color: var(--text-color); font-size: 0.9rem;">NVIDIA</span>
+                        </div>
+                        <input type="password" id="dash-nvidia-key" placeholder="Enter your NVIDIA API Key" style="flex: 1; min-width: 200px; background-color: color-mix(in srgb, var(--bg-color) 50%, transparent); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.6rem 0.75rem; color: var(--text-color); font-size: 0.85rem;" />
+                        <button class="btn-primary" id="btn-save-nvidia-key" style="padding: 0.5rem 1rem; font-size: 0.8rem; border-radius: 8px;">
+                            <span class="material-symbols-outlined" style="font-size: 1rem;">save</span> Save
+                        </button>
+                        <span id="nvidia-key-status" style="font-size: 0.75rem; color: var(--text-slate-500);">Not set</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Algorithms -->
+            <div class="section-header">
+                <h3 class="section-title" style="margin-bottom: 0;">
+                    <span class="material-symbols-outlined text-primary">library_books</span>
+                    Featured Algorithms
+                </h3>
+                <a class="view-all-link" href="#" data-action-page="algorithms">View All</a>
+            </div>
+            <div class="algorithms-grid" id="recent-algorithms">
+                <!-- Item 1 -->
+                <div class="glass-card algorithm-card">
+                    <div class="card-image-wrapper">
+                        <div class="card-gradient-primary" style="position: absolute; inset: 0;"></div>
+                        <div class="card-icon-bg">
+                            <span class="material-symbols-outlined text-primary">neurology</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="card-title-row">
+                            <h5 class="card-title">NeuralPath-Alpha</h5>
+                            <span class="badge badge-stable">Stable</span>
+                        </div>
+                        <p class="card-desc">Autonomous pathfinding module for multi-agent swarm environments.</p>
+                        <div class="card-footer">
+                            <span class="card-time">Updated 2h ago</span>
+                            <div class="avatar-group">
+                                <div class="avatar-sm"></div>
+                                <div class="avatar-counter">+3</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Item 2 -->
+                <div class="glass-card algorithm-card">
+                    <div class="card-image-wrapper">
+                        <div class="card-gradient-purple" style="position: absolute; inset: 0;"></div>
+                        <div class="card-icon-bg">
+                            <span class="material-symbols-outlined text-purple-400">auto_awesome</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="card-title-row">
+                            <h5 class="card-title">DreamGenerator_v2</h5>
+                            <span class="badge badge-beta">Beta</span>
+                        </div>
+                        <p class="card-desc">Generative adversarial network focused on organic texture synthesis.</p>
+                        <div class="card-footer">
+                            <span class="card-time">Updated 5h ago</span>
+                            <div class="avatar-group">
+                                <div class="avatar-sm"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Item 3 -->
+                <div class="glass-card algorithm-card">
+                    <div class="card-image-wrapper">
+                        <div class="card-gradient-orange" style="position: absolute; inset: 0;"></div>
+                        <div class="card-icon-bg">
+                            <span class="material-symbols-outlined text-orange-400">shield</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="card-title-row">
+                            <h5 class="card-title">Securify-Core</h5>
+                            <span class="badge badge-legacy">Legacy</span>
+                        </div>
+                        <p class="card-desc">Hardened encryption layer for inter-node communication protocols.</p>
+                        <div class="card-footer">
+                            <span class="card-time">Updated 1d ago</span>
+                            <div class="avatar-group">
+                                <div class="avatar-sm"></div>
+                                <div class="avatar-sm" style="background-color: #475569;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Item 4 -->
+                <div class="glass-card algorithm-card">
+                    <div class="card-image-wrapper">
+                        <div class="card-gradient-blue" style="position: absolute; inset: 0;"></div>
+                        <div class="card-icon-bg">
+                            <span class="material-symbols-outlined text-blue-400">rocket_launch</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="card-title-row">
+                            <h5 class="card-title">Quantum-Sort-Final</h5>
+                            <span class="badge badge-stable">Stable</span>
+                        </div>
+                        <p class="card-desc">Highly optimized sorting algorithm for non-binary data structures.</p>
+                        <div class="card-footer">
+                            <span class="card-time">Updated 3d ago</span>
+                            <div class="avatar-group">
+                                <div class="avatar-sm"
+                                    style="background-color: color-mix(in srgb, var(--primary) 20%, transparent); border-color: transparent;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- PAGE: STUDIO (Code Editor + Visualizer)                      -->
+    <!-- ============================================================ -->
+    <div id="page-studio" class="page-section">
+        <main class="studio-main">
+            <!-- Left Panel: Code Editor -->
+            <section class="studio-panel studio-panel-left">
+                <div class="panel-header" style="flex-direction: column; gap: 0.5rem; align-items: stretch;">
+                    <!-- Row 1: Editor + File Select + Copy/Run -->
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div class="flex items-center gap-4">
+                            <div class="panel-header-title">
+                                <span class="material-symbols-outlined text-primary"
+                                    style="font-size: 0.875rem;">terminal</span>
+                                <span>Editor</span>
+                            </div>
+                            <div style="height: 1rem; width: 1px; background-color: var(--border-color);"></div>
+                            <select class="code-select" id="code-file-select">
+                                <option value="new">-- New Code --</option>
+                                <option value="BubbleSort.cpp">BubbleSort.cpp</option>
+                                <option value="SelectionSort.cpp">SelectionSort.cpp</option>
+                                <option value="MergeSort.cpp">MergeSort.cpp</option>
+                                <option value="BinarySearch.cpp">BinarySearch.cpp</option>
+                                <option value="BFS.cpp">BFS.cpp</option>
+                                <option value="DFS.cpp">DFS.cpp</option>
+                            </select>
+                        </div>
+                        <div class="flex gap-2">
+                            <button class="btn-icon-text" id="btn-copy-code">
+                                <span class="material-symbols-outlined" style="font-size: 0.875rem;">content_copy</span>
+                                Copy
+                            </button>
+                            <button class="btn-run" id="btn-run-algorithm">
+                                <span class="material-symbols-outlined" style="font-size: 0.875rem;">play_arrow</span>
+                                Run
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Row 2: AI Controls -->
+                    <div style="display: flex; align-items: center; gap: 0.5rem; padding-top: 0.4rem; border-top: 1px solid var(--border-color); flex-wrap: wrap;">
+                        <span class="material-symbols-outlined" style="font-size: 0.875rem; color: var(--primary);">auto_awesome</span>
+                        <select class="code-select" id="ai-provider-select" style="min-width: 80px;" title="Select AI Provider">
+                            <option value="ollama">Ollama</option>
+                            <option value="gemini">Gemini</option>
+                            <option value="nvidia">NVIDIA</option>
+                        </select>
+                        <input type="text" id="ai-ollama-url" placeholder="http://localhost:11434" title="Ollama Base URL" style="background-color: transparent; border: 1px solid var(--border-color); border-radius: 4px; padding: 0.25rem 0.5rem; color: var(--text-color); font-size: 0.7rem; width: 140px;">
+                        <input type="password" id="ai-api-key" placeholder="Provider API Key" title="Enter your API Key (Saved to Backend automatically)" style="background-color: transparent; border: 1px solid var(--border-color); border-radius: 4px; padding: 0.25rem 0.5rem; color: var(--text-color); font-size: 0.7rem; width: 120px; display: none;">
+                        <select class="code-select" id="ai-model-select" style="min-width: 140px;" title="Select AI Model">
+                            <option value="">Loading models...</option>
+                        </select>
+                        <button class="btn-icon-text" id="btn-ai-generate" title="Generate Visualization with AI" style="color: var(--primary); border: 1px solid var(--primary); border-radius: 4px; padding: 0.2rem 0.5rem;">
+                            <span class="material-symbols-outlined" style="font-size: 0.875rem;">auto_awesome</span>
+                            AI Generate
+                        </button>
+                    </div>
+                </div>
+                <!-- Code Editor with textarea + syntax highlight overlay -->
+                <div class="code-container">
+                    <div class="line-numbers" id="line-numbers">
+                        1<br />2<br />3<br />4<br />5<br />6<br />7<br />8<br />9<br />10<br />11<br />12<br />13<br />14<br />15<br />16<br />17<br />18<br />19<br />20
+                    </div>
+                    <div class="code-editor-wrapper">
+                        <pre class="code-highlight-overlay" id="code-highlight"></pre>
+                        <textarea class="code-textarea" id="code-editor" spellcheck="false" autocomplete="off"
+                            autocorrect="off" autocapitalize="off" wrap="off">void bubbleSort(int arr[], int n) {
+    for (int i = 0; i < n - 1; i++) {
+        bool swapped = false;
+        for (int j = 0; j < n - i - 1; j++) {
+            if (arr[j] > arr[j + 1]) {
+                swap(arr[j], arr[j + 1]);
+                swapped = true;
+            }
+        }
+        if (!swapped) break;
+    }
+}</textarea>
+                    </div>
+                </div>
+                <!-- Playground Input -->
+                <div class="playground-section">
+                    <div class="playground-header">
+                        <div class="panel-header-title">
+                            <span class="material-symbols-outlined text-primary"
+                                style="font-size: 0.875rem;">input</span>
+                            <span id="playground-label">Array Values</span>
+                        </div>
+                        <button class="btn-save-sm" id="btn-save-project">
+                            <span class="material-symbols-outlined" style="font-size: 0.875rem;">save</span>
+                            Save
+                        </button>
+                    </div>
+                    <div class="playground-inputs">
+                        <input type="text" class="playground-input" id="playground-input"
+                            placeholder="Enter array values: 45, 12, 56, 32, 8, 41"
+                            value="45, 12, 56, 32, 8, 41, 28, 63" />
+                        <div class="search-target-group" id="search-target-group" style="display: none;">
+                            <label class="playground-input-label">Target</label>
+                            <input type="number" class="playground-input playground-input-sm" id="search-target-input"
+                                placeholder="Target value" value="32" />
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <!-- Right Panel: Visualizer Canvas -->
+            <section class="studio-panel studio-panel-right">
+                <div class="absolute inset-0 grid-bg z-0" style="position: absolute; inset: 0; z-index: 0;"></div>
+                <div class="panel-header" style="z-index: 10;">
+                    <div class="panel-header-title">
+                        <span class="material-symbols-outlined text-primary"
+                            style="font-size: 0.875rem;">visibility</span>
+                        <span>Visualization</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="visualizer-legend">
+                            <div class="legend-box legend-primary"></div> Current
+                            <div class="legend-box legend-purple"></div> Comparing
+                        </div>
+                        <button class="btn-icon-text" id="btn-assistant-toggle" title="AI Assistant">
+                            <span class="material-symbols-outlined" style="font-size: 1rem;">smart_toy</span>
+                            AI
+                        </button>
+                    </div>
+                </div>
+                <!-- Canvas — bars / graph rendered here by visualizer.js -->
+                <div class="visualizer-canvas" id="visualizer-canvas">
+                    <!-- bars get rendered dynamically -->
+                </div>
+                <!-- Step Description -->
+                <div class="step-description-bar" id="step-description-container">
+                    <span class="material-symbols-outlined"
+                        style="font-size: 0.875rem; color: var(--primary);">info</span>
+                    <span id="step-description">Click "Run" to start the visualization.</span>
+                </div>
+                <!-- Floating Info Card -->
+                <div class="floating-info-card" id="stats-sidebar">
+                    <button class="stats-toggle-btn" id="btn-stats-toggle">
+                        <span class="material-symbols-outlined">chevron_left</span>
+                    </button>
+                    <p class="info-card-title">Algorithm Stats</p>
+                    <div class="space-y-2">
+                        <div class="info-row">
+                            <span class="info-label">Swaps</span>
+                            <span class="info-value text-primary" id="info-swaps">0</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Comparisons</span>
+                            <span class="info-value text-primary" id="info-comparisons">0</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Time Complexity</span>
+                            <span class="info-value text-yellow-600 dark:text-yellow-400" id="info-complexity">—</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Space Complexity</span>
+                            <span class="info-value text-yellow-600 dark:text-yellow-400" id="info-space">—</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+        <!-- Fixed Bottom Visualizer Player -->
+        <footer class="studio-footer">
+            <!-- Timeline Progress -->
+            <div class="timeline-container">
+                <div class="timeline-labels">
+                    <span id="timeline-step">Step 0 / 0</span>
+                    <span id="timeline-time">Time: 00:00.0</span>
+                </div>
+                <div class="timeline-track">
+                    <div class="timeline-progress" id="timeline-progress" style="width: 0%;"></div>
+                </div>
+            </div>
+            <!-- Media Controls -->
+            <div class="player-controls">
+                <button class="btn-control" id="btn-skip-start" title="Skip to start">
+                    <span class="material-symbols-outlined">skip_previous</span>
+                </button>
+                <button class="btn-control" id="btn-step-back" title="Step back">
+                    <span class="material-symbols-outlined">undo</span>
+                </button>
+                <button class="btn-play" id="btn-play-pause" title="Play / Pause">
+                    <span class="material-symbols-outlined text-3xl font-bold">play_arrow</span>
+                </button>
+                <button class="btn-control" id="btn-step-forward" title="Step forward">
+                    <span class="material-symbols-outlined">redo</span>
+                </button>
+                <button class="btn-control" id="btn-skip-end" title="Skip to end">
+                    <span class="material-symbols-outlined">skip_next</span>
+                </button>
+            </div>
+            <!-- Speed & Secondary Settings -->
+            <div class="speed-control-container">
+                <div class="timeline-labels">
+                    <div class="flex items-center gap-1">
+                        <span class="material-symbols-outlined" style="font-size: 0.75rem;">speed</span>
+                        <span>Execution Speed</span>
+                    </div>
+                    <span class="text-primary" id="speed-value">1.5x</span>
+                </div>
+                <input class="speed-slider" id="speed-slider" max="4" min="0.5" step="0.5" type="range" value="1.5" />
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <button class="btn-export">
+                    <span class="material-symbols-outlined" style="font-size: 0.875rem;">download</span>
+                    Export
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- PAGE: ALGORITHMS (Library)                                   -->
+    <!-- ============================================================ -->
+    <div id="page-algorithms" class="page-section">
+        <main class="algo-main flex-1">
+            <!-- Hero Section -->
+            <div class="algo-hero">
+                <div class="flex-col gap-4">
+                    <div class="badge-neural">
+                        <span class="material-symbols-outlined text-sm text-primary">auto_awesome</span>
+                        <span>Neural Optimized</span>
+                    </div>
+                    <h1 class="algo-title">Algorithm Library</h1>
+                    <p class="algo-subtitle">
+                        Explore our curated collection of high-performance data structures and neural-enhanced
+                        algorithms designed for the next generation of computing.
+                    </p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button class="algo-btn-secondary">
+                        <span class="material-symbols-outlined" style="font-size: 1.25rem;">filter_list</span>
+                        <span>Filter</span>
+                    </button>
+                    <button class="btn-primary" style="padding: 0.5rem 1rem; font-size: 0.875rem;"
+                        data-action-page="studio">
+                        <span class="material-symbols-outlined" style="font-size: 1.25rem;">add</span>
+                        <span>New Algorithm</span>
+                    </button>
+                </div>
+            </div>
+            <!-- Categories Tabs -->
+            <div class="algo-tabs no-scrollbar">
+                <button class="tab-btn active">All</button>
+                <button class="tab-btn">Sorting</button>
+                <button class="tab-btn">Searching</button>
+                <button class="tab-btn">Graph Theory</button>
+                <button class="tab-btn">Dynamic Programming</button>
+            </div>
+            <!-- Algorithm Grid -->
+            <div class="algorithms-grid">
+                <!-- Bubble Sort -->
+                <div class="glass-card algorithm-card flex flex-col" data-algorithm="bubbleSort">
+                    <div class="card-image-wrapper">
+                        <div class="card-gradient-primary" style="position: absolute; inset: 0;"></div>
+                        <div class="card-icon-bg">
+                            <span class="material-symbols-outlined text-primary">sort</span>
+                        </div>
+                    </div>
+                    <div class="card-body flex flex-col flex-1">
+                        <div class="card-title-row">
+                            <h5 class="card-title">Bubble Sort</h5>
+                            <span class="badge badge-legacy">O(n²)</span>
+                        </div>
+                        <p class="card-desc">
+                            A simple comparison-based sorting algorithm that repeatedly steps through the list, compares
+                            adjacent elements and swaps them if they are in the wrong order.
+                        </p>
+                        <div class="mt-auto pt-4 flex justify-between items-center"
+                            style="border-top: 1px solid color-mix(in srgb, var(--primary) 10%, transparent);">
+                            <div class="flex items-center gap-2"
+                                style="color: color-mix(in srgb, var(--primary) 60%, transparent); font-size: 0.75rem;">
+                                <span class="material-symbols-outlined" style="font-size: 0.875rem;">schedule</span>
+                                <span>Stable</span>
+                            </div>
+                            <button class="library-link" data-action-page="studio"
+                                style="background: none; border: none; cursor: pointer;">
+                                Open Implementation
+                                <span class="material-symbols-outlined"
+                                    style="font-size: 1.125rem;">arrow_forward</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Selection Sort -->
+                <div class="glass-card algorithm-card flex flex-col" data-algorithm="selectionSort">
+                    <div class="card-image-wrapper">
+                        <div class="card-gradient-orange" style="position: absolute; inset: 0;"></div>
+                        <div class="card-icon-bg">
+                            <span class="material-symbols-outlined text-orange-400">low_priority</span>
+                        </div>
+                    </div>
+                    <div class="card-body flex flex-col flex-1">
+                        <div class="card-title-row">
+                            <h5 class="card-title">Selection Sort</h5>
+                            <span class="badge badge-legacy">O(n²)</span>
+                        </div>
+                        <p class="card-desc">
+                            Finds the minimum element from the unsorted portion and places it at the beginning. Repeats
+                            for each position.
+                        </p>
+                        <div class="mt-auto pt-4 flex justify-between items-center"
+                            style="border-top: 1px solid color-mix(in srgb, var(--primary) 10%, transparent);">
+                            <div class="flex items-center gap-2"
+                                style="color: color-mix(in srgb, var(--primary) 60%, transparent); font-size: 0.75rem;">
+                                <span class="material-symbols-outlined" style="font-size: 0.875rem;">swap_vert</span>
+                                <span>In-Place</span>
+                            </div>
+                            <button class="library-link" data-action-page="studio"
+                                style="background: none; border: none; cursor: pointer;">
+                                Open Implementation
+                                <span class="material-symbols-outlined"
+                                    style="font-size: 1.125rem;">arrow_forward</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Merge Sort -->
+                <div class="glass-card algorithm-card flex flex-col" data-algorithm="mergeSort">
+                    <div class="card-image-wrapper">
+                        <div class="card-gradient-blue" style="position: absolute; inset: 0;"></div>
+                        <div class="card-icon-bg">
+                            <span class="material-symbols-outlined text-blue-400">call_split</span>
+                        </div>
+                    </div>
+                    <div class="card-body flex flex-col flex-1">
+                        <div class="card-title-row">
+                            <h5 class="card-title">Merge Sort</h5>
+                            <span class="badge badge-stable"
+                                style="background-color: color-mix(in srgb, #3b82f6 20%, transparent); color: #60a5fa;">O(n
+                                log n)</span>
+                        </div>
+                        <p class="card-desc">
+                            An efficient, stable, divide-and-conquer sorting algorithm. It breaks the input array into
+                            smaller subarrays until they contain only one element, then merges them.
+                        </p>
+                        <div class="mt-auto pt-4 flex justify-between items-center"
+                            style="border-top: 1px solid color-mix(in srgb, var(--primary) 10%, transparent);">
+                            <div class="flex items-center gap-2"
+                                style="color: color-mix(in srgb, var(--primary) 60%, transparent); font-size: 0.75rem;">
+                                <span class="material-symbols-outlined" style="font-size: 0.875rem;">database</span>
+                                <span>Divide &amp; Conquer</span>
+                            </div>
+                            <button class="library-link" data-action-page="studio"
+                                style="background: none; border: none; cursor: pointer;">
+                                Open Implementation
+                                <span class="material-symbols-outlined"
+                                    style="font-size: 1.125rem;">arrow_forward</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Binary Search -->
+                <div class="glass-card algorithm-card flex flex-col" data-algorithm="binarySearch">
+                    <div class="card-image-wrapper">
+                        <div class="card-gradient-purple" style="position: absolute; inset: 0;"></div>
+                        <div class="card-icon-bg">
+                            <span class="material-symbols-outlined text-purple-400">search_check</span>
+                        </div>
+                    </div>
+                    <div class="card-body flex flex-col flex-1">
+                        <div class="card-title-row">
+                            <h5 class="card-title">Binary Search</h5>
+                            <span class="badge badge-legacy">O(log n)</span>
+                        </div>
+                        <p class="card-desc">
+                            A fast search algorithm for sorted arrays. It works by repeatedly dividing the search
+                            interval in half until the target value is found or the interval is empty.
+                        </p>
+                        <div class="mt-auto pt-4 flex justify-between items-center"
+                            style="border-top: 1px solid color-mix(in srgb, var(--primary) 10%, transparent);">
+                            <div class="flex items-center gap-2"
+                                style="color: color-mix(in srgb, var(--primary) 60%, transparent); font-size: 0.75rem;">
+                                <span class="material-symbols-outlined" style="font-size: 0.875rem;">flash_on</span>
+                                <span>Efficient Search</span>
+                            </div>
+                            <button class="library-link" data-action-page="studio"
+                                style="background: none; border: none; cursor: pointer;">
+                                Open Implementation
+                                <span class="material-symbols-outlined"
+                                    style="font-size: 1.125rem;">arrow_forward</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Depth First Search -->
+                <div class="glass-card algorithm-card flex flex-col" data-algorithm="dfs">
+                    <div class="card-image-wrapper">
+                        <div class="card-gradient-orange" style="position: absolute; inset: 0;"></div>
+                        <div class="card-icon-bg">
+                            <span class="material-symbols-outlined text-orange-400">account_tree</span>
+                        </div>
+                    </div>
+                    <div class="card-body flex flex-col flex-1">
+                        <div class="card-title-row">
+                            <h5 class="card-title">Depth First Search</h5>
+                            <span class="badge badge-legacy">O(V + E)</span>
+                        </div>
+                        <p class="card-desc">
+                            An algorithm for traversing or searching tree or graph data structures. It explores as far
+                            as possible along each branch before backtracking.
+                        </p>
+                        <div class="mt-auto pt-4 flex justify-between items-center"
+                            style="border-top: 1px solid color-mix(in srgb, var(--primary) 10%, transparent);">
+                            <div class="flex items-center gap-2"
+                                style="color: color-mix(in srgb, var(--primary) 60%, transparent); font-size: 0.75rem;">
+                                <span class="material-symbols-outlined" style="font-size: 0.875rem;">hub</span>
+                                <span>Graph Traversal</span>
+                            </div>
+                            <button class="library-link" data-action-page="studio"
+                                style="background: none; border: none; cursor: pointer;">
+                                Open Implementation
+                                <span class="material-symbols-outlined"
+                                    style="font-size: 1.125rem;">arrow_forward</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Breadth First Search -->
+                <div class="glass-card algorithm-card flex flex-col" data-algorithm="bfs">
+                    <div class="card-image-wrapper">
+                        <div class="card-gradient-primary" style="position: absolute; inset: 0;"></div>
+                        <div class="card-icon-bg">
+                            <span class="material-symbols-outlined" style="color: #34d399;">radar</span>
+                        </div>
+                    </div>
+                    <div class="card-body flex flex-col flex-1">
+                        <div class="card-title-row">
+                            <h5 class="card-title">Breadth First Search</h5>
+                            <span class="badge badge-legacy">O(V + E)</span>
+                        </div>
+                        <p class="card-desc">
+                            Traverses tree or graph structures by exploring all neighbor nodes at the present depth
+                            before moving on to nodes at the next depth level.
+                        </p>
+                        <div class="mt-auto pt-4 flex justify-between items-center"
+                            style="border-top: 1px solid color-mix(in srgb, var(--primary) 10%, transparent);">
+                            <div class="flex items-center gap-2"
+                                style="color: color-mix(in srgb, var(--primary) 60%, transparent); font-size: 0.75rem;">
+                                <span class="material-symbols-outlined" style="font-size: 0.875rem;">grain</span>
+                                <span>Layer Search</span>
+                            </div>
+                            <button class="library-link" data-action-page="studio"
+                                style="background: none; border: none; cursor: pointer;">
+                                Open Implementation
+                                <span class="material-symbols-outlined"
+                                    style="font-size: 1.125rem;">arrow_forward</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Neural Pathfinding (Coming Soon) -->
+                <div class="glass-card algorithm-card flex flex-col"
+                    style="border: 1px dashed color-mix(in srgb, var(--primary) 40%, transparent); background-color: color-mix(in srgb, var(--primary) 5%, transparent);">
+                    <div
+                        style="height: 12rem; width: 100%; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 1rem;">
+                        <div class="pulse-circle" style="width: 4rem; height: 4rem;">
+                            <span class="material-symbols-outlined" style="font-size: 1.875rem;">psychology</span>
+                        </div>
+                        <p class="text-primary font-medium" style="font-weight: 500;">Coming Soon</p>
+                    </div>
+                    <div class="card-body flex flex-col flex-1"
+                        style="border-top: 1px solid color-mix(in srgb, var(--primary) 10%, transparent);">
+                        <h3 class="card-title mb-2" style="font-size: 1.25rem;">Neural Pathfinding</h3>
+                        <p class="card-desc" style="font-style: italic;">
+                            Developing next-gen AI-driven path optimization using weight-balanced heuristics...
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <!-- Pagination/Load More -->
+            <div class="flex flex-col items-center gap-6" style="margin-top: 4rem;">
+                <button class="load-more-btn">
+                    <span class="material-symbols-outlined">expand_more</span>
+                    Load More Algorithms
+                </button>
+                <p style="color: var(--text-slate-500); font-size: 0.875rem;">Showing 6 of 124 neural algorithms</p>
+            </div>
+        </main>
+        <!-- Footer -->
+        <footer class="app-footer">
+            <div class="max-w-7xl mx-auto flex flex-col justify-between items-center gap-4"
+                style="flex-direction: row; width: 100%;">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary text-xl">polymer</span>
+                    <span class="footer-text">© 2024 NeuroCode Labs. All neural paths reserved.</span>
+                </div>
+                <div class="flex items-center gap-8">
+                    <a class="text-slate-500 hover:text-primary transition-colors"
+                        style="font-size: 0.875rem; text-decoration: none;" href="#">Documentation</a>
+                    <a class="text-slate-500 hover:text-primary transition-colors"
+                        style="font-size: 0.875rem; text-decoration: none;" href="#">API Status</a>
+                    <a class="text-slate-500 hover:text-primary transition-colors"
+                        style="font-size: 0.875rem; text-decoration: none;" href="#">Security</a>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- ========== COMMUNITY PLACEHOLDER ========== -->
+    <div id="page-community" class="page-section">
+        <main class="community-main">
+            <div class="community-content">
+                <div class="pulse-circle">
+                    <span class="material-symbols-outlined text-5xl">groups</span>
+                </div>
+                <h2 style="font-size: 1.875rem; font-weight: 700; color: var(--text-color);">Community Hub</h2>
+                <p style="color: var(--text-slate-600); line-height: 1.5;">The community section is coming soon. Connect
+                    with fellow developers, share algorithms, and collaborate on neural projects.</p>
+            </div>
+        </main>
+    </div>
+
+    <!-- ========== AI ASSISTANT PANEL ========== -->
+    <div class="ai-assistant-panel" id="ai-assistant-panel">
+        <div class="assistant-header">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary" style="font-size: 1.25rem;">smart_toy</span>
+                <span class="assistant-title">NeuroCode AI</span>
+            </div>
+            <button class="btn-assistant-close" id="btn-assistant-close">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="assistant-chat-body" id="assistant-chat-body">
+            <!-- Messages rendered dynamically -->
+        </div>
+        <div class="assistant-input-area">
+            <input type="text" class="assistant-input" id="assistant-input" placeholder="Ask about algorithms..." />
+            <button class="btn-assistant-send" id="btn-assistant-send">
+                <span class="material-symbols-outlined">send</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ========== AUTHENTICATION MODAL ========== -->
+    <div id="auth-modal" style="display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); align-items: center; justify-content: center;">
+        <div style="background-color: var(--surface-color); border: 1px solid var(--border-color); border-radius: 12px; width: 100%; max-width: 400px; padding: 2rem; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h3 id="auth-modal-title" style="font-size: 1.5rem; font-weight: 700; color: var(--text-color);">Login</h3>
+                <button id="btn-close-auth" style="background: none; border: none; color: var(--text-slate-500); cursor: pointer;"><span class="material-symbols-outlined">close</span></button>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                <div>
+                    <label style="display: block; font-size: 0.875rem; color: var(--text-slate-500); margin-bottom: 0.25rem;">Email</label>
+                    <input type="email" id="auth-email" style="width: 100%; background-color: color-mix(in srgb, var(--bg-color) 50%, transparent); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.75rem; color: var(--text-color);" placeholder="Enter email address" />
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.875rem; color: var(--text-slate-500); margin-bottom: 0.25rem;">Password</label>
+                    <input type="password" id="auth-password" style="width: 100%; background-color: color-mix(in srgb, var(--bg-color) 50%, transparent); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.75rem; color: var(--text-color);" placeholder="Enter password" />
+                </div>
+                
+                <div id="auth-error-msg" style="color: #ef4444; font-size: 0.875rem; display: none;">Error message here</div>
+                
+                <button class="btn-primary" id="btn-submit-auth" style="width: 100%; padding: 0.75rem; justify-content: center; margin-top: 0.5rem;">Login</button>
+            </div>
+            
+            <div style="text-align: center; margin-top: 1.5rem; font-size: 0.875rem; color: var(--text-slate-500);">
+                <span id="auth-switch-text">Don't have an account?</span>
+                <button id="btn-switch-auth" style="background: none; border: none; color: var(--primary); font-weight: 600; cursor: pointer; margin-left: 0.25rem;">Register</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="js/main.js"></script>
+</body>
+
+</html>
