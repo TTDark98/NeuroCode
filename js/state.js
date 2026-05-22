@@ -9,7 +9,7 @@ const StateStore = (() => {
         currentStep: 0,
         totalSteps: 0,
         isPlaying: false,
-        speed: 1.5,          // multiplier (0.5x to 4x)
+        speed: 1.0,          // multiplier (0.5x to 4x)
         currentAlgorithm: null, // 'bubbleSort' | 'selectionSort' | 'mergeSort' | 'binarySearch' | 'bfs' | 'dfs'
         inputData: [],        // the raw input (array of numbers, graph edges, etc.)
         steps: [],            // array of step snapshots from algorithm

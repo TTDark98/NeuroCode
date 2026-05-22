@@ -220,8 +220,127 @@ IMPORTANT RULES:
         }
     }
 
+    // ─── Generate Code from Prompt ─────────────────
+    async function generateCodeFromPrompt(promptStr) {
+        const systemPrompt = `You are NeuroCode Architect, an AI assistant that writes clean, self-contained algorithms in C++ or Javascript.
+Given a request from the user, write the complete, clean algorithm code.
+Follow these guidelines:
+1. Output ONLY the code itself.
+2. Do NOT wrap the code in markdown code blocks (e.g. \`\`\`cpp).
+3. Do NOT include any introductory or concluding text, explanations, or notes.
+4. Make the code clean, well-commented, and suitable for algorithm visualization.
+5. Example: If the user asks for 'Bubble Sort', return the C++ bubbleSort function and nothing else.`;
+
+        let resultText;
+        if (provider === 'ollama') {
+            const response = await fetch(`${ollamaUrl}/api/chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model: selectedModel,
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: promptStr }
+                    ],
+                    stream: false
+                })
+            });
+            const data = await response.json();
+            if (data.error) throw new Error(data.error);
+            resultText = data.message.content;
+        } else {
+            const apiKey = getApiKey();
+            if (!apiKey) {
+                throw new Error('Gemini API Key is required. Set it in the settings modal.');
+            }
+            const url = `${GEMINI_BASE}${selectedModel}:generateContent?key=${apiKey}`;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    system_instruction: {
+                        parts: { text: systemPrompt }
+                    },
+                    contents: [{
+                        parts: [{ text: promptStr }]
+                    }],
+                    generationConfig: {
+                        temperature: 0.3
+                    }
+                })
+            });
+            const data = await response.json();
+            if (data.error) throw new Error(data.error.message);
+            resultText = data.candidates[0].content.parts[0].text;
+        }
+
+        // Clean up markdown block wraps just in case
+        resultText = resultText.replace(/^```[a-zA-Z]*\n/gm, '').replace(/```$/gm, '').trim();
+        return resultText;
+    }
+
+    // ─── Generate Pseudocode from Code ─────────────
+    async function generatePseudocodeFromCode(codeStr) {
+        const systemPrompt = `You are NeuroCode Architect, an AI assistant that analyzes code and explains algorithms.
+Given raw source code (e.g. C++ or Javascript), explain the algorithm step-by-step and write clean, readable pseudocode.
+Follow these guidelines:
+1. Output ONLY the description and the pseudocode.
+2. Do NOT wrap the text in markdown code blocks representing the entire response. You can write inline code or standard list items.
+3. Keep it clear, precise, and well-structured, suitable for developers who want to understand the logic.
+4. Do NOT include any introductory or concluding text, notes, or meta-commentary. Start directly with the algorithm name or summary.`;
+
+        let resultText;
+        if (provider === 'ollama') {
+            const response = await fetch(`${ollamaUrl}/api/chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model: selectedModel,
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: codeStr }
+                    ],
+                    stream: false
+                })
+            });
+            const data = await response.json();
+            if (data.error) throw new Error(data.error);
+            resultText = data.message.content;
+        } else {
+            const apiKey = getApiKey();
+            if (!apiKey) {
+                throw new Error('Gemini API Key is required. Set it in the settings modal.');
+            }
+            const url = `${GEMINI_BASE}${selectedModel}:generateContent?key=${apiKey}`;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    system_instruction: {
+                        parts: { text: systemPrompt }
+                    },
+                    contents: [{
+                        parts: [{ text: codeStr }]
+                    }],
+                    generationConfig: {
+                        temperature: 0.3
+                    }
+                })
+            });
+            const data = await response.json();
+            if (data.error) throw new Error(data.error.message);
+            resultText = data.candidates[0].content.parts[0].text;
+        }
+
+        // Clean up markdown block wraps if any
+        resultText = resultText.replace(/^```[a-zA-Z]*\n/gm, '').replace(/```$/gm, '').trim();
+        return resultText;
+    }
+
     return {
         generateVisualization,
+        generateCodeFromPrompt,
+        generatePseudocodeFromCode,
         fetchAvailableModels,
         getProvider, setProvider,
         getModel, setModel,

@@ -1,0 +1,278 @@
+================================================================================
+                    NEUROCODE — SYSTEM BLUEPRINT & ROADMAP
+================================================================================
+This document contains the complete layout, logic structure, file anatomy, 
+and full-stack roadmap for the NeuroCode Algorithm Visualization Platform.
+If the codebase is lost or corrupted, this file contains the detailed specifications 
+necessary to reconstruct the entire application from scratch.
+
+--------------------------------------------------------------------------------
+TABLE OF CONTENTS:
+1. Executive Summary & Design Aesthetics
+2. Frontend Architecture & File Anatomy
+3. Core State Machine & Event Flow
+4. Built-in Algorithm Step-Trace Formats
+5. The 5-Phase Full-Stack Development Plan
+6. Feature Analysis: Fully AI-Powered Visualizer vs. Hybrid Engine
+--------------------------------------------------------------------------------
+
+================================================================================
+1. EXECUTIVE SUMMARY & DESIGN AESTHETICS
+================================================================================
+NeuroCode is an interactive, highly animated SPA (Single Page Application) for
+visualizing algorithms. It utilizes a glassmorphic dark-futuristic styling 
+with harmonic colors, smooth transitions, and multiple aesthetic themes.
+
+Key UX/UI Layout Sections:
+- Navigation Bar: Logo, dashboard/studio/algorithms/community pages, search bar,
+  theme selector (Dark Futuristic, Retro Pixel, Light Minimalist, Solarized Hacker,
+  Neuro Blush), notifications, and user avatar.
+- Dashboard Page: Welcome header, stats grid (Algorithm counts, runs, storage, 
+  nodes), quick action cards, and a grid of recent projects.
+- Studio Page: The main editor split-panel:
+  - Left Panel: File selector dropdown, run button, copy button, AI provider toggle
+    (Ollama/Gemini), model selector, custom input textbox, target input textbox.
+  - Code Editor: Textarea overlay with pre-formatted syntax highlighting and synchronized
+    scrolling line numbers.
+  - Right Panel: Glassmorphic visualizer canvas (drawing bars for sorting/searching,
+    and SVG circles/lines for graph traversals), running stats card, and step-description bar.
+  - Footer Panel: Media controls (skip to start, step back, play/pause, step forward,
+    skip to end), timeline track, and speed range slider.
+- Algorithms Library Page: Categories filter tab (All, Sorting, Searching, Graphs,
+  Dynamic Programming), card deck of standard algorithms, pagination loader.
+- AI Assistant Panel: Slide-out drawer with chat bubble log, chat text input, and send button.
+
+================================================================================
+2. FRONTEND ARCHITECTURE & FILE ANATOMY
+================================================================================
+
+A. index.html
+--------------------------------------------------------------------------------
+Main structural wrapper. Contains navigation links with `data-page="<page_id>"`
+and page sections with IDs `page-dashboard`, `page-studio`, `page-algorithms`, and
+`page-community`. Houses the AI assistant drawer container (`#ai-assistant-panel`).
+
+B. styles.css
+--------------------------------------------------------------------------------
+Declares HSL color tokens for themes under `body[data-theme="..."]`.
+Provides layout classes using modern Flexbox and Grid. Core components include:
+- `.glass-card`: Glassmorphism using `backdrop-filter: blur(12px)` and thin border overlays.
+- `.vis-bar`: Dynamic divs scaled to heights matching values, colored by highlights:
+  - `.vis-bar-primary`: Active theme primary color.
+  - `.vis-bar-compare`: Indigo/violet compare indicator.
+  - `.vis-bar-highlight-swap`: Orange/amber swap indicator.
+  - `.vis-bar-highlight-sorted`: Green success indicator.
+- `.graph-node`, `.graph-edge`: SVG element classes styled with transitions.
+- `.code-editor-wrapper`: Relative container overlays `<pre>` (colorized code) and 
+  `<textarea>` (transparent text, caret color matching primary, pointer-events enabled).
+
+C. js/state.js
+--------------------------------------------------------------------------------
+Simple pub-sub store maintaining global reactive state:
+- `currentPage` (string)
+- `currentAlgorithm` (string key)
+- `editorCode` (string)
+- `inputData` (array/object)
+- `steps` (array of trace frames)
+- `currentStep` (integer index)
+- `totalSteps` (integer)
+- `isPlaying` (boolean)
+- `speed` (float multiplier)
+- `complexity` (object: {time, space})
+- `visualizationType` ('bars' | 'graph')
+
+D. js/main.js
+--------------------------------------------------------------------------------
+Application orchestrator:
+- SPA routing: Listens for clicks on `[data-page]` and toggles section visibility.
+- Theme management: Listens to `#theme-selector` and updates `body[data-theme]`.
+- Editor bindings: Syncs the line numbers count, syntax highlighting overlay, and 
+  scroll alignment between `#code-editor` and `#code-highlight`.
+- Input routing: Parses `#playground-input` values based on the selected algorithm category.
+- UI Triggering: Invokes algorithm executions, AI trace generation, and project file downloads.
+
+E. js/parser.js
+--------------------------------------------------------------------------------
+Contains parsing helpers:
+- `highlightCode(code)`: Translates text into colorized span tokens (keywords, types, numbers, comments).
+- `generateLineNumbers(count)`: Returns HTML string `1<br>2<br>...` for line counts.
+- `detectAlgorithm(code)`: Regex search to guess which algorithm is written (e.g. bubbleSort, bfs).
+- `parsePlaygroundInput(str, algo)`: Splits comma-separated values into integer arrays or graph edges.
+
+F. js/algorithms.js
+--------------------------------------------------------------------------------
+Executes algorithms locally and returns step histories. It maintains the registry of:
+- `bubbleSort`: Traces passes, comparing elements at `j` and `j+1`.
+- `selectionSort`: Traces minimum element searches.
+- `mergeSort`: Traces recursive divide-and-conquer merges.
+- `binarySearch`: Traces boundary shifts (`left`, `right`, `mid`).
+- `bfs` & `dfs`: Runs graph traversals and tracks queue/stack discoveries.
+- `runAlgorithm(key, data, extra)`: Dispatches inputs to functions.
+
+G. js/visualizer.js
+--------------------------------------------------------------------------------
+Subscribes to `currentStep` and `steps` changes and draws UI frames:
+- `bars` mode: Creates divs with height matching value/maxValue percentage. Smoothly translates
+  height property changes using CSS transitions.
+- `graph` mode: Draws SVG nodes positioned on a radial layout. Hooks up edges and applies classes 
+  like `.graph-node-current` or `.graph-node-visited` based on step metadata.
+
+H. js/player.js
+--------------------------------------------------------------------------------
+Controls visualizer execution loops:
+- `play()`: Sets up an interval based on execution speed to increment `currentStep`.
+- `pause()`: Clears the interval.
+- `stepForward()`, `stepBackward()`: Directly alters `currentStep` indexes.
+- Maintains timeline sliders and progress bars.
+
+I. js/storage.js
+--------------------------------------------------------------------------------
+Handles local project serialization:
+- Reads/writes objects containing keys (`algorithm`, `code`, `inputData`) to `localStorage`.
+- Aggregates metrics (saved projects list, storage capacity bytes) and populates dashboard widgets.
+
+J. js/ai-generator.js
+--------------------------------------------------------------------------------
+Coordinates calls to LLM endpoints (Ollama/Gemini) to convert arbitrary code strings 
+and custom playground arrays into visualizer step-by-step trace JSON objects.
+
+K. js/assistant.js
+--------------------------------------------------------------------------------
+Slide-out drawer chatbot. Uses keyword pattern matching to reply with algorithm 
+summaries and code optimization tips.
+
+================================================================================
+3. CORE STATE MACHINE & EVENT FLOW
+================================================================================
+When the user clicks "Run" inside the studio:
+1. `main.js` reads code from editor and inputs from playground.
+2. `parser.js` parses the inputs into a structured array or adjacency list.
+3. `algorithms.js` executes the chosen function (e.g., `mergeSort(inputData)`).
+4. The function returns a results payload:
+   `{ steps: [step1, step2, ...], complexity: { time: "O(n log n)", space: "O(n)" } }`
+5. `main.js` commits the returned steps array and complexity object to `StateStore`.
+6. `player.js` resets `currentStep` index to 0.
+7. `StateStore` fires notifications to registered subscribers.
+8. `visualizer.js` intercepts step changes and rebuilds/updates DOM or SVG elements.
+9. `player.js` controls the timeline player loop, changing step indices over time.
+
+================================================================================
+4. BUILT-IN ALGORITHM STEP-TRACE FORMATS
+================================================================================
+
+A. Array Visualizer Frame (Sorting & Searching)
+--------------------------------------------------------------------------------
+```json
+{
+  "array": [12, 32, 8, 41, 45, 56],
+  "highlights": [
+    { "index": 1, "type": "compare" },
+    { "index": 2, "type": "compare" }
+  ],
+  "action": "comparing",
+  "description": "Comparing arr[1] = 32 with arr[2] = 8",
+  "comparisons": 4,
+  "swaps": 2
+}
+```
+
+B. Graph Visualizer Frame (BFS & DFS)
+--------------------------------------------------------------------------------
+```json
+{
+  "graph": {
+    "nodes": [0, 1, 2, 3],
+    "adjacencyList": { "0": [1, 2], "1": [0, 3], "2": [0], "3": [1] }
+  },
+  "visited": [0, 1],
+  "currentNode": 1,
+  "highlights": [
+    { "node": 1, "type": "current" },
+    { "node": 3, "type": "compare" }
+  ],
+  "action": "searching",
+  "description": "Discovered neighbor 3 from current node 1 — pushing to queue."
+}
+```
+
+================================================================================
+5. THE 5-PHASE FULL-STACK DEVELOPMENT PLAN
+================================================================================
+
+PHASE 1: SERVER & DATABASE FOUNDATION
+--------------------------------------------------------------------------------
+- Initialize Node.js environment, install Express, SQLite3 driver, and Socket.io.
+- Set up SQLite Database with schemas for:
+  - Users (auth profiles, password hashing with bcrypt, creation timestamp).
+  - Saved Projects (relational records containing code, inputs, metadata).
+  - Social items (Algorithm feed, likes/stars, commenting table).
+- Code JWT-based user session authentication API endpoints (`/api/auth/register`, `/api/auth/login`).
+
+PHASE 2: PROJECT PERSISTENCE & USER SYNC
+--------------------------------------------------------------------------------
+- Replace localStorage client operations inside `js/storage.js` with AJAX backend calls.
+- Connect user saving endpoints: `/api/projects/save`, `/api/projects/load`, and `/api/projects/delete`.
+- Build the dashboard dynamic feed loader to pull storage metrics, saved creations count, 
+  and personal history panels live from the Express database.
+
+PHASE 3: "VS MODE" ALGORITHM ARENA & BENCHMARKING PROFILER
+--------------------------------------------------------------------------------
+- Code the dual-canvas visualizer inside the frontend (split-screen layout).
+- Integrate comparative speed charts:
+  - Synchronize execution steps between two algorithm players.
+  - Draw live comparison bars plotting swaps and comparisons side-by-side.
+- Build the Empirical Benchmarking Profiler:
+  - Backend runs user algorithm codes iteratively against array sizes $N = [10, 100, 1000, 5000, 10000]$.
+  - Backend counts processing operations or cpu execution times.
+  - Render an interactive benchmarking line-graph displaying real performance curves 
+    layered over theoretical Big-O limits.
+
+PHASE 4: REAL-TIME COLLABORATIVE MULTIPLAYER STUDIO
+--------------------------------------------------------------------------------
+- Setup Socket.io room rooms on the server.
+- Connect frontend editors to WebSocket channels when starting/joining collaborative rooms.
+- Wire multiplayer events:
+  - Synchronized Code Editing: Broadcast key presses or editor cursors.
+  - Synced Vis Playback: Broadcast "Play", "Pause", "Seek", or "Step" events so 
+    visualizer canvases move in sync across all clients in the room.
+  - Display live room members at the top.
+
+PHASE 5: COMMUNITY SHARING HUB & POLISHING
+--------------------------------------------------------------------------------
+- Implement the public gallery feed where users can browse community-created code traces.
+- Add features: Forking projects, starring/liking, and commenting.
+- Polish visual overlays: Glassmorphic cards, loading spinners, and CSS transitions.
+
+================================================================================
+6. FEATURE ANALYSIS: FULLY AI-POWERED VISUALIZER VS. HYBRID ENGINE
+================================================================================
+
+User Concept:
+"Making the visualizer fully AI — generating trace step frames dynamically on the
+server using Gemini/Ollama, replacing local deterministic trace scripts entirely."
+
+A. Advantages:
+- Universal Code Visualizer: The platform can visualize ANY code structure written
+  by the user (custom linked lists, dynamic programming, backtracking matrices, etc.) 
+  without developer coding manual trace frameworks for every new algorithm.
+- Lightweight Client: The frontend doesn't need to contain algorithms.js logic.
+
+B. Disadvantages:
+- High Latency: LLM requests take 1–5 seconds to process, parse, and respond. The "Run" 
+  button would lose its instant feedback loop.
+- Offline Availability: Requires constant high-speed network connections.
+- API Usage & Costs: High Gemini API request volumes will quickly exceed free limits.
+- Non-Deterministic Results: LLMs can make occasional mathematical errors, trace 
+  indexes wrong, or miss boundary state conditions. A visualizer must be 100% accurate.
+
+C. My Recommendation (The Hybrid Architecture):
+Instead of choosing one or the other, we will use a Hybrid Visualizer:
+1. Deterministic Engine (Local): Use pre-coded local traces (algorithms.js) for standard
+   library algorithms (Bubble Sort, BFS, etc.). This ensures instant execution, 100% 
+   accuracy, and offline capabilities.
+2. AI Synthesized Engine (Fallback): When the user types completely custom code 
+   that doesn't match the library, compile/route it to the AI Generator to dynamically 
+   synthesize the trace JSON.
+This gives the user the futuristic capability of visualizing arbitrary code while 
+preserving speed, reliability, and offline support for core algorithms.
+================================================================================

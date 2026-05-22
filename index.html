@@ -36,7 +36,7 @@
                         <a class="nav-link" href="#" data-page="dashboard">Dashboard</a>
                         <a class="nav-link" href="#" data-page="studio">Studio</a>
                         <a class="nav-link" href="#" data-page="algorithms">Algorithms</a>
-                        <a class="nav-link" href="#" data-page="community">Community</a>
+                        <a class="nav-link" href="#" data-page="architect">AI Architect</a>
                     </nav>
                 </div>
                 <!-- Actions -->
@@ -53,6 +53,9 @@
                             <option value="solarized-hacker">Solarized Hacker</option>
                             <option value="neuro-blush">Neuro Blush</option>
                         </select>
+                        <button class="notification-btn" id="btn-settings-toggle" title="AI Settings">
+                            <span class="material-symbols-outlined">settings</span>
+                        </button>
                         <button class="notification-btn">
                             <span class="material-symbols-outlined">notifications</span>
                         </button>
@@ -269,52 +272,32 @@
         <main class="studio-main">
             <!-- Left Panel: Code Editor -->
             <section class="studio-panel studio-panel-left">
-                <div class="panel-header" style="flex-direction: column; gap: 0.5rem; align-items: stretch;">
-                    <!-- Row 1: Editor + File Select + Copy/Run -->
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div class="flex items-center gap-4">
-                            <div class="panel-header-title">
-                                <span class="material-symbols-outlined text-primary"
-                                    style="font-size: 0.875rem;">terminal</span>
-                                <span>Editor</span>
-                            </div>
-                            <div style="height: 1rem; width: 1px; background-color: var(--border-color);"></div>
-                            <select class="code-select" id="code-file-select">
-                                <option value="new">-- New Code --</option>
-                                <option value="BubbleSort.cpp">BubbleSort.cpp</option>
-                                <option value="SelectionSort.cpp">SelectionSort.cpp</option>
-                                <option value="MergeSort.cpp">MergeSort.cpp</option>
-                                <option value="BinarySearch.cpp">BinarySearch.cpp</option>
-                                <option value="BFS.cpp">BFS.cpp</option>
-                                <option value="DFS.cpp">DFS.cpp</option>
-                            </select>
+                <div class="panel-header">
+                    <div class="flex items-center gap-4">
+                        <div class="panel-header-title">
+                            <span class="material-symbols-outlined text-primary"
+                                style="font-size: 0.875rem;">terminal</span>
+                            <span>Editor</span>
                         </div>
-                        <div class="flex gap-2">
-                            <button class="btn-icon-text" id="btn-copy-code">
-                                <span class="material-symbols-outlined" style="font-size: 0.875rem;">content_copy</span>
-                                Copy
-                            </button>
-                            <button class="btn-run" id="btn-run-algorithm">
-                                <span class="material-symbols-outlined" style="font-size: 0.875rem;">play_arrow</span>
-                                Run
-                            </button>
-                        </div>
+                        <div style="height: 1rem; width: 1px; background-color: var(--border-color);"></div>
+                        <select class="code-select" id="code-file-select">
+                            <option value="new">-- New Code --</option>
+                            <option value="BubbleSort.cpp">BubbleSort.cpp</option>
+                            <option value="SelectionSort.cpp">SelectionSort.cpp</option>
+                            <option value="MergeSort.cpp">MergeSort.cpp</option>
+                            <option value="BinarySearch.cpp">BinarySearch.cpp</option>
+                            <option value="BFS.cpp">BFS.cpp</option>
+                            <option value="DFS.cpp">DFS.cpp</option>
+                        </select>
                     </div>
-                    <!-- Row 2: AI Controls -->
-                    <div style="display: flex; align-items: center; gap: 0.5rem; padding-top: 0.4rem; border-top: 1px solid var(--border-color); flex-wrap: wrap;">
-                        <span class="material-symbols-outlined" style="font-size: 0.875rem; color: var(--primary);">auto_awesome</span>
-                        <select class="code-select" id="ai-provider-select" style="min-width: 80px;" title="Select AI Provider">
-                            <option value="ollama">Ollama</option>
-                            <option value="gemini">Gemini</option>
-                        </select>
-                        <input type="text" id="ai-ollama-url" placeholder="http://localhost:11434" title="Ollama Base URL" style="background-color: transparent; border: 1px solid var(--border-color); border-radius: 4px; padding: 0.25rem 0.5rem; color: var(--text-color); font-size: 0.7rem; width: 140px;">
-                        <input type="password" id="ai-api-key" placeholder="Gemini API Key" title="Enter your Gemini API Key" style="background-color: transparent; border: 1px solid var(--border-color); border-radius: 4px; padding: 0.25rem 0.5rem; color: var(--text-color); font-size: 0.7rem; width: 120px; display: none;">
-                        <select class="code-select" id="ai-model-select" style="min-width: 140px;" title="Select AI Model">
-                            <option value="">Loading models...</option>
-                        </select>
-                        <button class="btn-icon-text" id="btn-ai-generate" title="Generate Visualization with AI" style="color: var(--primary); border: 1px solid var(--primary); border-radius: 4px; padding: 0.2rem 0.5rem;">
-                            <span class="material-symbols-outlined" style="font-size: 0.875rem;">auto_awesome</span>
-                            AI Generate
+                    <div class="flex gap-2">
+                        <button class="btn-icon-text" id="btn-copy-code">
+                            <span class="material-symbols-outlined" style="font-size: 0.875rem;">content_copy</span>
+                            Copy
+                        </button>
+                        <button class="btn-run" id="btn-run-algorithm">
+                            <span class="material-symbols-outlined" style="font-size: 0.875rem;">play_arrow</span>
+                            Run
                         </button>
                     </div>
                 </div>
@@ -459,9 +442,9 @@
                         <span class="material-symbols-outlined" style="font-size: 0.75rem;">speed</span>
                         <span>Execution Speed</span>
                     </div>
-                    <span class="text-primary" id="speed-value">1.5x</span>
+                    <span class="text-primary" id="speed-value">1.0x</span>
                 </div>
-                <input class="speed-slider" id="speed-slider" max="4" min="0.5" step="0.5" type="range" value="1.5" />
+                <input class="speed-slider" id="speed-slider" max="4" min="0.5" step="0.5" type="range" value="1.0" />
             </div>
             <div style="display: flex; align-items: center; gap: 0.5rem;">
                 <button class="btn-export">
@@ -760,17 +743,65 @@
         </footer>
     </div>
 
-    <!-- ========== COMMUNITY PLACEHOLDER ========== -->
-    <div id="page-community" class="page-section">
-        <main class="community-main">
-            <div class="community-content">
-                <div class="pulse-circle">
-                    <span class="material-symbols-outlined text-5xl">groups</span>
+
+
+    <!-- ============================================================ -->
+    <!-- PAGE: AI ARCHITECT                                           -->
+    <!-- ============================================================ -->
+    <div id="page-architect" class="page-section">
+        <main class="architect-main">
+            <!-- Left Panel: Natural Language Prompt Input -->
+            <section class="architect-panel architect-panel-left">
+                <div class="panel-header">
+                    <div class="panel-header-title">
+                        <span class="material-symbols-outlined text-primary" style="font-size: 0.875rem;">psychology</span>
+                        <span>Algorithm Specification</span>
+                    </div>
                 </div>
-                <h2 style="font-size: 1.875rem; font-weight: 700; color: var(--text-color);">Community Hub</h2>
-                <p style="color: var(--text-slate-600); line-height: 1.5;">The community section is coming soon. Connect
-                    with fellow developers, share algorithms, and collaborate on neural projects.</p>
-            </div>
+                <div class="architect-content">
+                    <div class="architect-input-group flex-1">
+                        <label for="architect-prompt" class="architect-label">Algorithm (Pseudocode or Description)</label>
+                        <textarea class="architect-prompt-textarea" id="architect-prompt" placeholder="Paste or type your algorithm here (e.g. step-by-step description or pseudocode)..."></textarea>
+                    </div>
+                    <div class="architect-actions">
+                        <button class="btn-primary glow-hover w-full" id="btn-architect-generate">
+                            <span class="material-symbols-outlined">code</span>
+                            Translate to Code
+                        </button>
+                    </div>
+                </div>
+            </section>
+            <!-- Right Panel: Code Preview -->
+            <section class="architect-panel architect-panel-right">
+                <div class="panel-header">
+                    <div class="panel-header-title">
+                        <span class="material-symbols-outlined text-primary" style="font-size: 0.875rem;">code</span>
+                        <span>Generated Source Code</span>
+                    </div>
+                </div>
+                <div class="architect-content">
+                    <!-- Code view wrapper mirroring Studio Editor styles -->
+                    <div class="code-container flex-1">
+                        <div class="line-numbers" id="architect-line-numbers">
+                            1
+                        </div>
+                        <div class="code-editor-wrapper">
+                            <pre class="code-highlight-overlay" id="architect-code-highlight"></pre>
+                            <textarea class="code-textarea" id="architect-code-preview" spellcheck="false" placeholder="// Paste or generate code here..."></textarea>
+                        </div>
+                    </div>
+                    <div class="architect-actions">
+                        <button class="btn-secondary w-full" id="btn-architect-explain">
+                            <span class="material-symbols-outlined">psychology</span>
+                            Reverse to Algorithm
+                        </button>
+                        <button class="btn-secondary w-full" id="btn-architect-send" disabled>
+                            <span class="material-symbols-outlined">send_to_mobile</span>
+                            Send to Studio &amp; Visualize
+                        </button>
+                    </div>
+                </div>
+            </section>
         </main>
     </div>
 
@@ -793,6 +824,50 @@
             <button class="btn-assistant-send" id="btn-assistant-send">
                 <span class="material-symbols-outlined">send</span>
             </button>
+        </div>
+    </div>
+
+    <!-- ========== SETTINGS MODAL ========== -->
+    <div class="modal-overlay" id="settings-modal" style="display: none;">
+        <div class="modal-container">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <span class="material-symbols-outlined text-primary">settings</span>
+                    <h3>AI Configuration</h3>
+                </div>
+                <button class="btn-modal-close" id="btn-settings-close" title="Close Settings">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-group">
+                    <label for="ai-provider-select" class="settings-label">AI Provider</label>
+                    <select class="settings-select" id="ai-provider-select">
+                        <option value="ollama">Ollama (Local LLM)</option>
+                        <option value="gemini">Gemini API (Cloud LLM)</option>
+                    </select>
+                </div>
+                <!-- Ollama Settings -->
+                <div class="settings-group" id="settings-ollama-group">
+                    <label for="ai-ollama-url" class="settings-label">Ollama Base URL</label>
+                    <input type="text" class="settings-input" id="ai-ollama-url" placeholder="http://localhost:11434" value="http://localhost:11434">
+                </div>
+                <!-- Gemini Settings -->
+                <div class="settings-group" id="settings-gemini-group" style="display: none;">
+                    <label for="ai-api-key" class="settings-label">Gemini API Key</label>
+                    <input type="password" class="settings-input" id="ai-api-key" placeholder="Enter Gemini API Key">
+                </div>
+                <!-- Model Selection -->
+                <div class="settings-group">
+                    <label for="ai-model-select" class="settings-label">Model Selection</label>
+                    <select class="settings-select" id="ai-model-select">
+                        <option value="">Loading models...</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary w-full" id="btn-settings-save">Save Settings</button>
+            </div>
         </div>
     </div>
 

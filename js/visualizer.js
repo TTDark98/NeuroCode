@@ -66,7 +66,7 @@ const Visualizer = (() => {
         if (!arr || arr.length === 0) return;
 
         const maxVal = Math.max(...arr);
-        const maxHeight = (canvasEl.clientHeight * 0.6) - 40; // scale down so it doesn't eat up the whole screen
+        const maxHeight = Math.max((canvasEl.clientHeight * 0.45) - 40, 100); // scale down so it doesn't eat up the whole screen
 
         // Build highlight map: index → type
         const highlightMap = {};

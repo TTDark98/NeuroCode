@@ -161,8 +161,8 @@ const Player = (() => {
         stopAutoPlay(); // clear any existing
 
         const speed = StateStore.get('speed');
-        // Base interval: 600ms at 1x speed
-        const interval = Math.max(100, 600 / speed);
+        // Base interval: 1000ms at 1x speed
+        const interval = Math.max(100, 1000 / speed);
 
         playInterval = setInterval(() => {
             const currentStep = StateStore.get('currentStep');

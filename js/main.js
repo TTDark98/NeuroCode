@@ -331,8 +331,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateProviderUI() {
         const prov = AIGenerator.getProvider();
-        if (aiApiKeyInput) aiApiKeyInput.style.display = prov === 'gemini' ? 'block' : 'none';
-        if (aiOllamaUrlInput) aiOllamaUrlInput.style.display = prov === 'ollama' ? 'block' : 'none';
+        const ollamaGroup = document.getElementById('settings-ollama-group');
+        const geminiGroup = document.getElementById('settings-gemini-group');
+        if (ollamaGroup) ollamaGroup.style.display = prov === 'ollama' ? 'block' : 'none';
+        if (geminiGroup) geminiGroup.style.display = prov === 'gemini' ? 'block' : 'none';
     }
 
     // Provider toggle
@@ -411,44 +413,210 @@ document.addEventListener('DOMContentLoaded', () => {
     initAiModelDropdown();
 
     // ═══════════════════════════════════════
+    // SETTINGS MODAL INTERACTION
+    // ═══════════════════════════════════════
+    const settingsModal = document.getElementById('settings-modal');
+    const btnSettingsToggle = document.getElementById('btn-settings-toggle');
+    const btnSettingsClose = document.getElementById('btn-settings-close');
+    const btnSettingsSave = document.getElementById('btn-settings-save');
+
+    function openSettingsModal() {
+        if (settingsModal) {
+            settingsModal.style.display = 'flex';
+            requestAnimationFrame(() => {
+                settingsModal.classList.add('open');
+            });
+        }
+    }
+
+    function closeSettingsModal() {
+        if (settingsModal) {
+            settingsModal.classList.remove('open');
+            const onTransitionEnd = (e) => {
+                if (e.target === settingsModal) {
+                    settingsModal.style.display = 'none';
+                    settingsModal.removeEventListener('transitionend', onTransitionEnd);
+                }
+            };
+            settingsModal.addEventListener('transitionend', onTransitionEnd);
+        }
+    }
+
+    if (btnSettingsToggle) {
+        btnSettingsToggle.addEventListener('click', openSettingsModal);
+    }
+
+    if (btnSettingsClose) {
+        btnSettingsClose.addEventListener('click', closeSettingsModal);
+    }
+
+    if (btnSettingsSave) {
+        btnSettingsSave.addEventListener('click', () => {
+            // Save settings explicitly (the inputs already trigger changes, but this forces it)
+            if (aiApiKeyInput) {
+                const key = aiApiKeyInput.value.trim();
+                if (key) {
+                    localStorage.setItem('neurocode-gemini-key', key);
+                } else {
+                    localStorage.removeItem('neurocode-gemini-key');
+                }
+            }
+            initAiModelDropdown();
+            showToast('Settings saved!');
+            closeSettingsModal();
+        });
+    }
+
+    if (settingsModal) {
+        settingsModal.addEventListener('click', (e) => {
+            if (e.target === settingsModal) {
+                closeSettingsModal();
+            }
+        });
+    }
+
+    // ═══════════════════════════════════════
+    // AI ARCHITECT LOGIC
+    // ═══════════════════════════════════════
+    const architectPrompt = document.getElementById('architect-prompt');
+    const btnArchitectGenerate = document.getElementById('btn-architect-generate');
+    const btnArchitectExplain = document.getElementById('btn-architect-explain');
+    const btnArchitectSend = document.getElementById('btn-architect-send');
+    const architectCodePreview = document.getElementById('architect-code-preview');
+    const architectCodeHighlight = document.getElementById('architect-code-highlight');
+    const architectLineNumbers = document.getElementById('architect-line-numbers');
+
+    function updateArchitectCodeDisplay() {
+        if (!architectCodePreview || !architectCodeHighlight) return;
+
+        const code = architectCodePreview.value;
+        architectCodeHighlight.innerHTML = Parser.highlightCode(code);
+
+        // Update line numbers
+        const lineCount = code.split('\n').length;
+        if (architectLineNumbers) {
+            architectLineNumbers.innerHTML = Parser.generateLineNumbers(lineCount);
+        }
+    }
+
+    if (architectCodePreview) {
+        // Sync scrolling
+        architectCodePreview.addEventListener('scroll', () => {
+            if (architectCodeHighlight) {
+                architectCodeHighlight.scrollTop = architectCodePreview.scrollTop;
+                architectCodeHighlight.scrollLeft = architectCodePreview.scrollLeft;
+            }
+            if (architectLineNumbers) {
+                architectLineNumbers.scrollTop = architectCodePreview.scrollTop;
+            }
+        });
+
+        // Update highlight and toggle send button on typing/pasting
+        architectCodePreview.addEventListener('input', () => {
+            updateArchitectCodeDisplay();
+            if (btnArchitectSend) {
+                btnArchitectSend.disabled = !architectCodePreview.value.trim();
+            }
+        });
+    }
+
+    if (btnArchitectGenerate) {
+        btnArchitectGenerate.addEventListener('click', async () => {
+            if (!architectPrompt || !architectPrompt.value.trim()) {
+                showToast('Please enter pseudocode or description first!');
+                return;
+            }
+
+            const promptStr = architectPrompt.value;
+            const originalHtml = btnArchitectGenerate.innerHTML;
+
+            // Loading state
+            btnArchitectGenerate.innerHTML = `<span class="material-symbols-outlined spin" style="font-size: 0.875rem; animation: spin 1s linear infinite;">autorenew</span> Generating...`;
+            btnArchitectGenerate.disabled = true;
+            if (btnArchitectSend) btnArchitectSend.disabled = true;
+
+            try {
+                const generatedCode = await AIGenerator.generateCodeFromPrompt(promptStr);
+                if (architectCodePreview) {
+                    architectCodePreview.value = generatedCode;
+                    updateArchitectCodeDisplay();
+                }
+                if (btnArchitectSend) {
+                    btnArchitectSend.disabled = false;
+                }
+                showToast('Code generated successfully!');
+            } catch (err) {
+                showToast(err.message || 'Error generating code.');
+            } finally {
+                btnArchitectGenerate.innerHTML = originalHtml;
+                btnArchitectGenerate.disabled = false;
+            }
+        });
+    }
+
+    if (btnArchitectExplain) {
+        btnArchitectExplain.addEventListener('click', async () => {
+            if (!architectCodePreview || !architectCodePreview.value.trim()) {
+                showToast('Please enter some code to reverse first!');
+                return;
+            }
+
+            const codeStr = architectCodePreview.value;
+            const originalHtml = btnArchitectExplain.innerHTML;
+
+            // Loading state
+            btnArchitectExplain.innerHTML = `<span class="material-symbols-outlined spin" style="font-size: 0.875rem; animation: spin 1s linear infinite;">autorenew</span> Reversing...`;
+            btnArchitectExplain.disabled = true;
+
+            try {
+                const generatedPseudocode = await AIGenerator.generatePseudocodeFromCode(codeStr);
+                if (architectPrompt) {
+                    architectPrompt.value = generatedPseudocode;
+                }
+                showToast('Algorithm reversed successfully!');
+            } catch (err) {
+                showToast(err.message || 'Error reversing code.');
+            } finally {
+                btnArchitectExplain.innerHTML = originalHtml;
+                btnArchitectExplain.disabled = false;
+            }
+        });
+    }
+
+    if (btnArchitectSend) {
+        btnArchitectSend.addEventListener('click', () => {
+            if (!architectCodePreview || !architectCodePreview.value.trim()) return;
+
+            const codeVal = architectCodePreview.value;
+            if (codeTextarea) {
+                codeTextarea.value = codeVal;
+                updateCodeDisplay();
+            }
+
+            if (codeSelect) {
+                codeSelect.value = 'new';
+            }
+
+            StateStore.set('currentAlgorithm', null);
+
+            navigateTo('studio');
+
+            setTimeout(() => {
+                runCurrentAlgorithm();
+                showToast('Algorithm loaded and visualizing!');
+            }, 500);
+        });
+    }
+
+    // ═══════════════════════════════════════
     // RUN / VISUALIZE BUTTON
     // ═══════════════════════════════════════
     const btnRun = document.getElementById('btn-run-algorithm');
     const btnSave = document.getElementById('btn-save-project');
-    const btnAiGenerate = document.getElementById('btn-ai-generate');
 
     if (btnRun) {
         btnRun.addEventListener('click', () => {
             runCurrentAlgorithm();
-        });
-    }
-
-    if (btnAiGenerate) {
-        btnAiGenerate.addEventListener('click', async () => {
-            if (!codeTextarea || !codeTextarea.value.trim()) {
-                showToast('Please enter some code first!');
-                return;
-            }
-
-            const codeStr = codeTextarea.value;
-            const inputStr = playgroundInput ? playgroundInput.value : '';
-
-            // Loading state
-            const originalHtml = btnAiGenerate.innerHTML;
-            btnAiGenerate.innerHTML = `<span class="material-symbols-outlined spin" style="font-size: 0.875rem; animation: spin 1s linear infinite;">autorenew</span> Generating...`;
-            btnAiGenerate.disabled = true;
-
-            try {
-                const algoKey = await AIGenerator.generateVisualization(codeStr, inputStr);
-                StateStore.set('currentAlgorithm', algoKey);
-                runCurrentAlgorithm();
-                showToast('AI Visualization Generated Successfully!');
-            } catch (err) {
-                showToast(err.message || 'Error generating visualization.');
-            } finally {
-                btnAiGenerate.innerHTML = originalHtml;
-                btnAiGenerate.disabled = false;
-            }
         });
     }
 
