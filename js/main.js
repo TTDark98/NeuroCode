@@ -14,6 +14,63 @@ import Assistant from './assistant.js';
 import AIGenerator from './ai-generator.js';
 
 document.addEventListener('DOMContentLoaded', () => {
+    // ═══════════════════════════════════════
+    // SESSION & AUTHENTICATION GUARD
+    // ═══════════════════════════════════════
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = './login.html';
+        return; // stop execution
+    }
+
+    // Verify token validity with backend
+    fetch('/api/auth/verify', {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = './login.html';
+        }
+    })
+    .catch(err => {
+        console.error('Session verification connection error:', err);
+    });
+
+    // Display user profile in UI
+    const userJson = localStorage.getItem('user');
+    if (userJson) {
+        try {
+            const currentUser = JSON.parse(userJson);
+            if (currentUser && currentUser.email) {
+                const welcomeTitle = document.querySelector('.welcome-title');
+                if (welcomeTitle) {
+                    const username = currentUser.email.split('@')[0];
+                    const capitalizedUser = username.charAt(0).toUpperCase() + username.slice(1);
+                    welcomeTitle.textContent = `Welcome back, ${capitalizedUser}.`;
+                }
+            }
+        } catch (e) {
+            console.error('Error parsing user profile:', e);
+        }
+    }
+
+    // Setup User Profile Logout trigger
+    const userAvatar = document.querySelector('.user-avatar');
+    if (userAvatar) {
+        userAvatar.style.cursor = 'pointer';
+        userAvatar.title = 'Click to Sign Out';
+        userAvatar.addEventListener('click', () => {
+            if (confirm('Are you sure you want to sign out?')) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.href = './login.html';
+            }
+        });
+    }
 
     // ═══════════════════════════════════════
     // SPA NAVIGATION (preserved from app.js)
@@ -620,59 +677,147 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function runCurrentAlgorithm() {
-        // Determine algorithm (from state or code detection)
-        let algoKey = StateStore.get('currentAlgorithm');
+    async function runCurrentAlgorithm() {
+        const codeText = codeTextarea ? codeTextarea.value : '';
 
-        // Try detecting from code if no algo selected
-        if (!algoKey && codeTextarea) {
-            algoKey = Parser.detectAlgorithm(codeTextarea.value);
+        if (!codeText.trim()) {
+            showToast('Code editor is empty. Please enter or select an algorithm.');
+            return;
         }
 
-        if (!algoKey) {
-            algoKey = 'bubbleSort'; // fallback
+        // Check if the editor code matches any standard library algorithm code exactly
+        let matchesLibrary = false;
+        let matchedAlgoKey = null;
+        for (const [key, libraryAlgo] of Object.entries(ALGORITHMS)) {
+            if (key === 'custom_ai') continue;
+            if (libraryAlgo.code && codeText.trim() === libraryAlgo.code.trim()) {
+                matchesLibrary = true;
+                matchedAlgoKey = key;
+                break;
+            }
         }
 
-        const algo = ALGORITHMS[algoKey];
-        if (!algo) return;
+        if (!matchesLibrary) {
+            // ROUTE TO AI SYNTHESIS ENGINE (Custom/Modified Code)
+            const btnRun = document.getElementById('btn-run-algorithm');
+            const originalBtnHtml = btnRun ? btnRun.innerHTML : 'Run';
+            
+            if (btnRun) {
+                btnRun.innerHTML = `<span class="material-symbols-outlined spin" style="font-size: 0.875rem; animation: spin 1s linear infinite;">autorenew</span> AI Running...`;
+                btnRun.disabled = true;
+            }
+            
+            showToast('AI is synthesizing visualization steps...');
 
-        // Parse input data
-        let inputData;
-        if (playgroundInput && playgroundInput.value.trim()) {
-            inputData = Parser.parsePlaygroundInput(playgroundInput.value, algoKey);
+            try {
+                const inputVal = playgroundInput ? playgroundInput.value : '';
+                const customAlgoKey = await AIGenerator.generateVisualization(codeText, inputVal);
+                
+                if (codeSelect) {
+                    codeSelect.value = 'new';
+                }
+                
+                const customAlgo = ALGORITHMS[customAlgoKey];
+                if (!customAlgo) throw new Error('Failed to register AI synthesized algorithm.');
+
+                let inputData;
+                if (playgroundInput && playgroundInput.value.trim()) {
+                    inputData = Parser.parsePlaygroundInput(playgroundInput.value, customAlgoKey);
+                }
+
+                if (!inputData) {
+                    inputData = customAlgo.defaultData;
+                }
+
+                const result = runAlgorithm(customAlgoKey, inputData);
+                if (!result) return;
+
+                Player.reset();
+                StateStore.setMany({
+                    steps: result.steps,
+                    totalSteps: result.steps.length,
+                    currentStep: 0,
+                    complexity: result.complexity,
+                    inputData: inputData,
+                    currentAlgorithm: customAlgoKey,
+                    visualizationType: customAlgo.type === 'graph' ? 'graph' : 'bars'
+                });
+
+                updateVisualizerLegend(customAlgo.type);
+                showToast('Visualization generated by AI!');
+                
+                // Track execution run count in MariaDB
+                Storage.incrementRuns();
+                
+            } catch (err) {
+                console.error(err);
+                showToast(`AI generation failed: ${err.message}`);
+            } finally {
+                if (btnRun) {
+                    btnRun.innerHTML = originalBtnHtml;
+                    btnRun.disabled = false;
+                }
+            }
+        } else {
+            // ROUTE TO LOCAL DETERMINISTIC ENGINE (Standard library algorithms)
+            const algoKey = matchedAlgoKey;
+            const algo = ALGORITHMS[algoKey];
+            if (!algo) return;
+
+            // Parse input data
+            let inputData;
+            if (playgroundInput && playgroundInput.value.trim()) {
+                inputData = Parser.parsePlaygroundInput(playgroundInput.value, algoKey);
+            }
+
+            if (!inputData) {
+                inputData = algo.defaultData;
+            }
+
+            // Extra args for search algorithms
+            let extraArgs;
+            if (algo.type === 'searching' && searchTargetInput) {
+                const target = parseInt(searchTargetInput.value);
+                extraArgs = isNaN(target) ? undefined : target;
+            }
+
+            // Sync selector value
+            const reverseMapping = {
+                'bubbleSort': 'BubbleSort.cpp',
+                'selectionSort': 'SelectionSort.cpp',
+                'mergeSort': 'MergeSort.cpp',
+                'binarySearch': 'BinarySearch.cpp',
+                'bfs': 'BFS.cpp',
+                'dfs': 'DFS.cpp',
+            };
+            if (codeSelect) {
+                codeSelect.value = reverseMapping[algoKey] || 'new';
+            }
+
+            // Set visualization type & current algorithm key
+            StateStore.set('visualizationType', algo.type === 'graph' ? 'graph' : 'bars');
+            StateStore.set('currentAlgorithm', algoKey);
+
+            // Run the algorithm locally
+            const result = runAlgorithm(algoKey, inputData, extraArgs);
+            if (!result) return;
+
+            // Update state with results
+            Player.reset();
+            StateStore.setMany({
+                steps: result.steps,
+                totalSteps: result.steps.length,
+                currentStep: 0,
+                complexity: result.complexity,
+                inputData: inputData,
+            });
+
+            // Update legend
+            updateVisualizerLegend(algo.type);
+
+            // Track execution run count in MariaDB
+            Storage.incrementRuns();
         }
-
-        if (!inputData) {
-            inputData = algo.defaultData;
-        }
-
-        // Extra args for search algorithms
-        let extraArgs;
-        if (algo.type === 'searching' && searchTargetInput) {
-            const target = parseInt(searchTargetInput.value);
-            extraArgs = isNaN(target) ? undefined : target;
-        }
-
-        // Set visualization type
-        StateStore.set('visualizationType', algo.type === 'graph' ? 'graph' : 'bars');
-        StateStore.set('currentAlgorithm', algoKey);
-
-        // Run the algorithm
-        const result = runAlgorithm(algoKey, inputData, extraArgs);
-        if (!result) return;
-
-        // Update state with results
-        Player.reset();
-        StateStore.setMany({
-            steps: result.steps,
-            totalSteps: result.steps.length,
-            currentStep: 0,
-            complexity: result.complexity,
-            inputData: inputData,
-        });
-
-        // Update legend based on algorithm type
-        updateVisualizerLegend(algo.type);
     }
 
     /**
@@ -709,7 +854,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // SAVE / LOAD PROJECTS
     // ═══════════════════════════════════════
     if (btnSave) {
-        btnSave.addEventListener('click', () => {
+        btnSave.addEventListener('click', async () => {
             const algoKey = StateStore.get('currentAlgorithm');
             const algo = ALGORITHMS[algoKey];
             const name = algo ? algo.name : 'Custom Algorithm';
@@ -719,7 +864,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const projectName = prompt('Project name:', name + ' — ' + new Date().toLocaleDateString());
             if (!projectName) return;
 
-            const success = Storage.saveProject(projectName, {
+            const success = await Storage.saveProject(projectName, {
                 algorithm: algoKey,
                 inputData: inputData,
                 code: code,
@@ -727,6 +872,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (success) {
                 showToast('Project saved successfully!');
+                // Refresh dashboard stats
+                Storage.updateDashboardStats();
+            } else {
+                showToast('Failed to save project.');
             }
         });
     }
@@ -750,6 +899,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 playgroundInput.value = project.inputData;
             }
         }, 400);
+    });
+
+    // Show toast event
+    document.addEventListener('show-toast', (e) => {
+        if (e.detail) {
+            showToast(e.detail);
+        }
     });
 
     // ═══════════════════════════════════════

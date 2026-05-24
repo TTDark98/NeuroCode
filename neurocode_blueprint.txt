@@ -144,17 +144,28 @@ summaries and code optimization tips.
 ================================================================================
 3. CORE STATE MACHINE & EVENT FLOW
 ================================================================================
-When the user clicks "Run" inside the studio:
-1. `main.js` reads code from editor and inputs from playground.
-2. `parser.js` parses the inputs into a structured array or adjacency list.
-3. `algorithms.js` executes the chosen function (e.g., `mergeSort(inputData)`).
-4. The function returns a results payload:
-   `{ steps: [step1, step2, ...], complexity: { time: "O(n log n)", space: "O(n)" } }`
-5. `main.js` commits the returned steps array and complexity object to `StateStore`.
-6. `player.js` resets `currentStep` index to 0.
-7. `StateStore` fires notifications to registered subscribers.
-8. `visualizer.js` intercepts step changes and rebuilds/updates DOM or SVG elements.
-9. `player.js` controls the timeline player loop, changing step indices over time.
+When the user clicks "Run" inside the studio, the system performs a hybrid check:
+1. `main.js` reads the code from the editor and check if it matches any built-in algorithm code exactly.
+2. IF THE CODE MATCHES A BUILT-IN ALGORITHM:
+   - The local deterministic engine is utilized instantly with no latency.
+   - `parser.js` parses the playground input using the local algorithm's key.
+   - `algorithms.js` runs the corresponding algorithm function (e.g., `mergeSort(inputData)`).
+3. IF THE CODE IS MODIFIED OR CUSTOM:
+   - The AI Synthesized Engine is triggered.
+   - The "Run" button is disabled and displays a spinning loader (`.spin`).
+   - A loading toast notifies the user that AI is synthesizing visualization steps.
+   - `AIGenerator.generateVisualization(code, playgroundInput)` is invoked.
+   - The AI validates the model selection (checking for provider-mismatch to prevent 404 errors) and queries the selected LLM provider (Ollama or Gemini) with the raw code and input. It handles transient errors (status 429 and 503) or connection failures automatically by retrying up to 3 times with exponential backoff (1s, 2s, 4s) while providing live progress toast notifications to the user.
+   - Upon success, the AI receives a step-trace JSON payload conforming to the state schema, and registers this definition under the key `'custom_ai'` in `ALGORITHMS`.
+   - `parser.js` parses the playground inputs using `'custom_ai'` as the target.
+   - `algorithms.js` runs the registered `'custom_ai'` function to extract steps and complexity.
+4. STATE COMMIT & RENDERING:
+   - The resulting payload containing the step-trace frames and complexity is committed to `StateStore`.
+   - `player.js` resets the playback index `currentStep` to 0.
+   - `StateStore` fires notifications to active subscribers.
+   - `visualizer.js` intercepts step changes to rebuild or update the DOM (sorting/searching) or SVG (graphs).
+   - `player.js` drives the visualizer playback loop.
+   - The legend dynamically re-renders to match the algorithm type.
 
 ================================================================================
 4. BUILT-IN ALGORITHM STEP-TRACE FORMATS
@@ -201,8 +212,8 @@ B. Graph Visualizer Frame (BFS & DFS)
 
 PHASE 1: SERVER & DATABASE FOUNDATION
 --------------------------------------------------------------------------------
-- Initialize Node.js environment, install Express, SQLite3 driver, and Socket.io.
-- Set up SQLite Database with schemas for:
+- Initialize Node.js environment, install Express, MariaDB/MySQL driver (`mysql2`), and Socket.io.
+- Set up MariaDB/MySQL Database with schemas for:
   - Users (auth profiles, password hashing with bcrypt, creation timestamp).
   - Saved Projects (relational records containing code, inputs, metadata).
   - Social items (Algorithm feed, likes/stars, commenting table).
@@ -276,3 +287,46 @@ Instead of choosing one or the other, we will use a Hybrid Visualizer:
 This gives the user the futuristic capability of visualizing arbitrary code while 
 preserving speed, reliability, and offline support for core algorithms.
 ================================================================================
+
+================================================================================
+7. CHRONOLOGICAL CHANGE LOG & HISTORY
+================================================================================
+[2026-05-22T18:15:00+05:30]
+- Implemented client-side hybrid routing: unmodified library algorithms run locally, and custom/modified code routes to LLM execution.
+- Added `fetchWithRetry` for 429/503 errors.
+
+[2026-05-22T23:55:00+05:30]
+- Resolved 404 cross-provider model selection errors by adding early model validation checks in `generateViaOllama`, `generateViaGemini`, `generateCodeFromPrompt`, and `generatePseudocodeFromCode`.
+- Enhanced user feedback by adding a custom `'show-toast'` global event listener and dispatching retry warning notifications with remaining attempts from `fetchWithRetry`.
+
+[2026-05-23T00:03:00+05:30]
+- Resized sorting visualizer bars by increasing `maxHeight` coefficient from `0.45` to `0.75` (minimum height from `100px` to `150px`) in `js/visualizer.js` for improved visibility.
+- Created the Chronological Change & Log History section in `neurocode_blueprint.txt` to track all modifications going forward.
+
+[2026-05-23T00:05:00+05:30]
+- Increased visualizer bar height coefficient further from `0.75` to `0.90` (minimum height from `150px` to `200px`) in `js/visualizer.js` to render larger sorting/searching bars.
+
+[2026-05-23T00:10:00+05:30]
+- Adjusted visualizer bars in `js/visualizer.js` to be shorter but wider: decreased `maxHeight` coefficient to `0.55` (minimum height `120px`) and increased width scaling coefficient to `- 0.2` (minimum width `5%`).
+
+[2026-05-23T00:13:00+05:30]
+- Updated architectural blueprint Phase 1 database choice from SQLite/MongoDB to MySQL.
+
+[2026-05-23T00:15:00+05:30]
+- Adjusted database reference to MariaDB (using the same compatible `mysql2` driver and Beekeeper Studio).
+
+[2026-05-23T00:45:00+05:30]
+- Fixed Express 5 catch-all wildcard routing syntax in `server.js` by using the new `/{*splat}` route pattern to avoid `path-to-regexp` compilation errors.
+- Verified connection and successful migration setup with local MariaDB instance.
+- Tested and verified user registration (`/api/auth/register`), login (`/api/auth/login`), and JWT verification (`/api/auth/verify`) endpoints successfully.
+
+[2026-05-23T00:55:00+05:30]
+- Removed unused `social_likes` and `social_comments` tables from the migration sequence in `db.js` and dropped them from the active MariaDB database instance.
+
+[2026-05-23T01:05:00+05:30]
+- Cleaned up modular backend structures by consolidating Express routes and database connections into a single `server.js` file.
+- Created `schema.sql` to represent database tables and dropped unnecessary `middleware/`, `routes/` folders, and `db.js`.
+- Integrated asynchronous projects loading/saving and visualizer execution run count tracking between client modules (`storage.js`, `main.js`) and the MariaDB server API.
+================================================================================
+
+

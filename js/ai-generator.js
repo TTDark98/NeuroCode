@@ -15,6 +15,41 @@ const AIGenerator = (() => {
     let selectedModel = localStorage.getItem('neurocode-ai-model') || 'qwen3.5:397b-cloud';
     let ollamaUrl = localStorage.getItem('neurocode-ollama-url') || OLLAMA_DEFAULT;
 
+    // Helper to fetch with retries for transient/high-demand errors (e.g. 503, 429)
+    async function fetchWithRetry(url, options = {}, maxRetries = 3, initialDelay = 1000) {
+        let retries = 0;
+        while (true) {
+            try {
+                const response = await fetch(url, options);
+                
+                // If it is a transient rate-limiting / high-demand error (429 or 503), retry
+                if ((response.status === 429 || response.status === 503) && retries < maxRetries) {
+                    retries++;
+                    const delay = initialDelay * Math.pow(2, retries - 1);
+                    const msg = `Transient error ${response.status} (High Demand). Retrying in ${Math.round(delay/1000)}s... (attempt ${retries}/${maxRetries})`;
+                    console.warn(msg);
+                    document.dispatchEvent(new CustomEvent('show-toast', { detail: msg }));
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    continue;
+                }
+                
+                return response;
+            } catch (err) {
+                // Also retry on network level connection failures
+                if (retries < maxRetries) {
+                    retries++;
+                    const delay = initialDelay * Math.pow(2, retries - 1);
+                    const msg = `Connection failed: ${err.message}. Retrying in ${Math.round(delay/1000)}s... (attempt ${retries}/${maxRetries})`;
+                    console.warn(msg);
+                    document.dispatchEvent(new CustomEvent('show-toast', { detail: msg }));
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    continue;
+                }
+                throw err;
+            }
+        }
+    }
+
     // ─── Provider / Model management ───────────────
     function getProvider() { return provider; }
     function setProvider(p) {
@@ -54,7 +89,7 @@ const AIGenerator = (() => {
 
     async function fetchOllamaModels() {
         try {
-            const res = await fetch(`${ollamaUrl}/api/tags`);
+            const res = await fetchWithRetry(`${ollamaUrl}/api/tags`);
             const data = await res.json();
             if (data.models) {
                 return data.models.map(m => m.name);
@@ -70,7 +105,7 @@ const AIGenerator = (() => {
         const apiKey = getApiKey();
         if (!apiKey) return [];
         try {
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+            const res = await fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
             const data = await res.json();
             if (data.error) throw new Error(data.error.message);
             return data.models
@@ -117,9 +152,13 @@ IMPORTANT RULES:
 
     // ─── Generate via Ollama ───────────────────────
     async function generateViaOllama(codeStr, inputStr) {
+        if (!selectedModel || selectedModel.startsWith('gemini')) {
+            throw new Error(`Invalid Ollama model selection: "${selectedModel}". Please open settings and select a valid Ollama model.`);
+        }
+
         const userPrompt = `Code:\n${codeStr}\n\nInput Data:\n${inputStr}`;
 
-        const response = await fetch(`${ollamaUrl}/api/chat`, {
+        const response = await fetchWithRetry(`${ollamaUrl}/api/chat`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -149,10 +188,14 @@ IMPORTANT RULES:
             throw new Error('Gemini API Key is required. Enter it in the toolbar.');
         }
 
+        if (!selectedModel || !selectedModel.startsWith('gemini')) {
+            throw new Error(`Invalid Gemini model selection: "${selectedModel}". Please open settings and select a valid Gemini model.`);
+        }
+
         const userPrompt = `Code:\n${codeStr}\n\nInput Data:\n${inputStr}`;
         const url = `${GEMINI_BASE}${selectedModel}:generateContent?key=${apiKey}`;
 
-        const response = await fetch(url, {
+        const response = await fetchWithRetry(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -222,6 +265,16 @@ IMPORTANT RULES:
 
     // ─── Generate Code from Prompt ─────────────────
     async function generateCodeFromPrompt(promptStr) {
+        if (provider === 'ollama') {
+            if (!selectedModel || selectedModel.startsWith('gemini')) {
+                throw new Error(`Invalid Ollama model selection: "${selectedModel}". Please open settings and select a valid Ollama model.`);
+            }
+        } else {
+            if (!selectedModel || !selectedModel.startsWith('gemini')) {
+                throw new Error(`Invalid Gemini model selection: "${selectedModel}". Please open settings and select a valid Gemini model.`);
+            }
+        }
+
         const systemPrompt = `You are NeuroCode Architect, an AI assistant that writes clean, self-contained algorithms in C++ or Javascript.
 Given a request from the user, write the complete, clean algorithm code.
 Follow these guidelines:
@@ -233,7 +286,7 @@ Follow these guidelines:
 
         let resultText;
         if (provider === 'ollama') {
-            const response = await fetch(`${ollamaUrl}/api/chat`, {
+            const response = await fetchWithRetry(`${ollamaUrl}/api/chat`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -254,7 +307,7 @@ Follow these guidelines:
                 throw new Error('Gemini API Key is required. Set it in the settings modal.');
             }
             const url = `${GEMINI_BASE}${selectedModel}:generateContent?key=${apiKey}`;
-            const response = await fetch(url, {
+            const response = await fetchWithRetry(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -281,6 +334,16 @@ Follow these guidelines:
 
     // ─── Generate Pseudocode from Code ─────────────
     async function generatePseudocodeFromCode(codeStr) {
+        if (provider === 'ollama') {
+            if (!selectedModel || selectedModel.startsWith('gemini')) {
+                throw new Error(`Invalid Ollama model selection: "${selectedModel}". Please open settings and select a valid Ollama model.`);
+            }
+        } else {
+            if (!selectedModel || !selectedModel.startsWith('gemini')) {
+                throw new Error(`Invalid Gemini model selection: "${selectedModel}". Please open settings and select a valid Gemini model.`);
+            }
+        }
+
         const systemPrompt = `You are NeuroCode Architect, an AI assistant that analyzes code and explains algorithms.
 Given raw source code (e.g. C++ or Javascript), explain the algorithm step-by-step and write clean, readable pseudocode.
 Follow these guidelines:
@@ -291,7 +354,7 @@ Follow these guidelines:
 
         let resultText;
         if (provider === 'ollama') {
-            const response = await fetch(`${ollamaUrl}/api/chat`, {
+            const response = await fetchWithRetry(`${ollamaUrl}/api/chat`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -312,7 +375,7 @@ Follow these guidelines:
                 throw new Error('Gemini API Key is required. Set it in the settings modal.');
             }
             const url = `${GEMINI_BASE}${selectedModel}:generateContent?key=${apiKey}`;
-            const response = await fetch(url, {
+            const response = await fetchWithRetry(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

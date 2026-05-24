@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeuroCode|Login</title>
+    <!-- Google Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&family=VT323&display=swap"
+        rel="stylesheet">
+    <!-- Google Material Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="login.css">
+</head>
+
+<body class="auth-body">
+    <!-- Interactive Background Canvas -->
+    <canvas id="login-particles" class="particles-canvas"></canvas>
+
+    <!-- Floating Theme Selector -->
+    <div class="login-theme-selector">
+        <span class="material-symbols-outlined theme-icon">palette</span>
+        <select id="login-theme-select" class="theme-select-dropdown" aria-label="Select Theme">
+            <option value="dark-futuristic">Dark Futuristic</option>
+            <option value="retro-pixel">Retro Pixel</option>
+            <option value="light-minimalist">Light Minimalist</option>
+            <option value="solarized-hacker">Solarized Hacker</option>
+            <option value="neuro-blush">Neuro Blush</option>
+        </select>
+    </div>
+
+    <div class="auth-wrapper">
+        <div class="auth-card">
+            <!-- Decorative Glow Elements (theme-dynamic) -->
+            <div class="glow-orb orb-1"></div>
+            <div class="glow-orb orb-2"></div>
+
+            <div class="auth-header">
+                <div class="brand-logo">
+                    <span class="material-symbols-outlined">polyline</span>
+                </div>
+                <h2 id="auth-title" class="auth-title">Welcome Back</h2>
+                <p id="auth-subtitle" class="auth-subtitle">Sign in to your NeuroCode workspace</p>
+            </div>
+
+            <form id="auth-form" class="auth-form" onsubmit="return false;">
+                <!-- Email Input Group -->
+                <div class="auth-input-group">
+                    <span class="material-symbols-outlined input-icon">mail</span>
+                    <input type="email" id="auth-email" required placeholder=" " autocomplete="email">
+                    <label for="auth-email">Email Address</label>
+                </div>
+
+                <!-- Password Input Group -->
+                <div class="auth-input-group">
+                    <span class="material-symbols-outlined input-icon">lock</span>
+                    <input type="password" id="auth-password" required placeholder=" " autocomplete="current-password">
+                    <label for="auth-password">Password</label>
+                    <button type="button" id="btn-toggle-password" class="toggle-password-btn"
+                        aria-label="Toggle Password Visibility">
+                        <span class="material-symbols-outlined">visibility</span>
+                    </button>
+                    <!-- Password Strength Bar -->
+                    <div class="password-strength-container">
+                        <div id="pw-strength-bar" class="password-strength-bar"></div>
+                    </div>
+                </div>
+
+                <!-- Status/Error Message -->
+                <div id="auth-message" class="auth-message" role="alert"></div>
+
+                <!-- Submit Button -->
+                <button type="submit" id="btn-submit" class="btn-submit">
+                    <span id="btn-text">Sign In</span>
+                    <span class="material-symbols-outlined arrow-icon">arrow_forward</span>
+                </button>
+            </form>
+
+            <!-- Switch Mode Section -->
+            <div class="auth-switch">
+                <span id="switch-text">Don't have an account?</span>
+                <button id="btn-switch-mode" class="btn-switch-mode">Register</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="login.js"></script>
+</body>
+
+</html>

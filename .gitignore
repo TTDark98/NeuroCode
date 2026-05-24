@@ -1,0 +1,25 @@
+# Dependency directories
+node_modules/
+jspm_packages/
+web_modules/
+
+# Environment variables (Sensitive secrets!)
+.env
+.env.local
+.env.*.local
+
+# Database/development local DB stores
+*.db
+*.sqlite
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Python files (in case you switch to Python backend)
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/

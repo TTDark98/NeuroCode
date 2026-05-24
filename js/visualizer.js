@@ -66,7 +66,7 @@ const Visualizer = (() => {
         if (!arr || arr.length === 0) return;
 
         const maxVal = Math.max(...arr);
-        const maxHeight = Math.max((canvasEl.clientHeight * 0.45) - 40, 100); // scale down so it doesn't eat up the whole screen
+        const maxHeight = Math.max((canvasEl.clientHeight * 0.55) - 40, 120); // shorter bars for better visualization visibility
 
         // Build highlight map: index → type
         const highlightMap = {};
@@ -85,7 +85,8 @@ const Visualizer = (() => {
                 const bar = document.createElement('div');
                 bar.className = 'vis-bar';
                 bar.style.height = `${(val / maxVal) * maxHeight}px`;
-                bar.style.width = `${Math.max(100 / arr.length - 1, 2)}%`;
+                bar.style.width = `${Math.max(100 / arr.length - 0.2, 5)}%`;
+
                 bar.dataset.index = idx;
 
                 // Apply highlight class

@@ -1,6 +1,6 @@
 /* ======================================
-   NeuroCode — localStorage Persistence
-   Save/load algorithm projects and user data.
+   NeuroCode — Database & LocalStorage Persistence
+   Save/load algorithm projects and user data from MariaDB backend.
    ====================================== */
 
 const STORAGE_KEY = 'neurocode-projects';
@@ -9,23 +9,54 @@ const MAX_STORAGE_MB = 5; // localStorage limit ~5MB
 const Storage = (() => {
 
     /**
-     * Get all saved projects
-     * Returns array of { name, algorithm, inputData, code, timestamp }
+     * Get all saved projects (API backend with localStorage fallback)
+     * Returns array of { id, name, algorithm, inputData, code, timestamp }
      */
-    function listProjects() {
+    async function listProjects() {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                return raw ? JSON.parse(raw) : [];
+            } catch {
+                return [];
+            }
+        }
+
         try {
-            const raw = localStorage.getItem(STORAGE_KEY);
-            return raw ? JSON.parse(raw) : [];
-        } catch {
-            return [];
+            const response = await fetch('/api/projects', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            if (!response.ok) {
+                throw new Error('Failed to fetch projects from server');
+            }
+            const dbProjects = await response.json();
+            return dbProjects.map(p => ({
+                id: p.id,
+                name: p.name,
+                algorithm: p.visualization_type,
+                inputData: p.input_data,
+                code: p.code,
+                timestamp: new Date(p.updated_at || p.created_at).getTime()
+            }));
+        } catch (e) {
+            console.warn('Failed to load projects from backend, falling back to localStorage:', e);
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                return raw ? JSON.parse(raw) : [];
+            } catch {
+                return [];
+            }
         }
     }
 
     /**
      * Save a project (upsert by name)
      */
-    function saveProject(name, { algorithm, inputData, code }) {
-        const projects = listProjects();
+    async function saveProject(name, { algorithm, inputData, code }) {
+        const projects = await listProjects();
         const existing = projects.findIndex(p => p.name === name);
 
         const project = {
@@ -42,32 +73,88 @@ const Storage = (() => {
             projects.unshift(project); // newest first
         }
 
-        // Keep max 50 projects
+        // Keep max 50 projects in cache
         if (projects.length > 50) projects.length = 50;
 
         try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
+        } catch (e) {
+            console.warn('Storage cache write failed:', e);
+        }
+
+        const token = localStorage.getItem('token');
+        if (!token) return true; // Offline/local mode
+
+        try {
+            const response = await fetch('/api/projects', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    name,
+                    code,
+                    input_data: inputData,
+                    visualization_type: algorithm
+                })
+            });
+
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.error || 'Server rejected project save');
+            }
+
             return true;
         } catch (e) {
-            console.warn('Storage save failed:', e);
-            return false;
+            console.error('Backend save failed:', e);
+            return true; // Return true as local cache save succeeded
         }
     }
 
     /**
      * Load a project by name
      */
-    function loadProject(name) {
-        const projects = listProjects();
+    async function loadProject(name) {
+        const projects = await listProjects();
         return projects.find(p => p.name === name) || null;
     }
 
     /**
      * Delete a project by name
      */
-    function deleteProject(name) {
-        const projects = listProjects().filter(p => p.name !== name);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
+    async function deleteProject(name) {
+        const projects = (await listProjects()).filter(p => p.name !== name);
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
+        } catch (e) {
+            console.warn('Failed to update localStorage after delete:', e);
+        }
+
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        try {
+            const response = await fetch('/api/projects', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            if (response.ok) {
+                const dbProjects = await response.json();
+                const matched = dbProjects.find(p => p.name === name);
+                if (matched) {
+                    await fetch(`/api/projects/${matched.id}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+                }
+            }
+        } catch (e) {
+            console.warn('Failed to delete project on backend:', e);
+        }
     }
 
     /**
@@ -86,10 +173,10 @@ const Storage = (() => {
     }
 
     /**
-     * Update dashboard stats with storage info
+     * Update dashboard stats with storage and DB run counts
      */
-    function updateDashboardStats() {
-        const projects = listProjects();
+    async function updateDashboardStats() {
+        const projects = await listProjects();
         const usage = getStorageUsage();
 
         // Update "Algorithms Created" stat
@@ -109,6 +196,29 @@ const Storage = (() => {
             storageBar.style.width = usage.percentage + '%';
         }
 
+        // Update "Visualizations Run" stat from user profile on MariaDB
+        const statRunsCount = document.querySelector('#stat-runs-count');
+        if (statRunsCount) {
+            const token = localStorage.getItem('token');
+            if (token) {
+                try {
+                    const response = await fetch('/api/auth/verify', {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+                    if (response.ok) {
+                        const userData = await response.json();
+                        if (userData && typeof userData.visualizer_runs !== 'undefined') {
+                            statRunsCount.textContent = userData.visualizer_runs;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Failed to fetch user runs from server:', e);
+                }
+            }
+        }
+
         // Update recent algorithms grid
         updateRecentAlgorithms(projects);
     }
@@ -118,7 +228,12 @@ const Storage = (() => {
      */
     function updateRecentAlgorithms(projects) {
         const grid = document.getElementById('recent-algorithms');
-        if (!grid || projects.length === 0) return;
+        if (!grid) return;
+
+        if (projects.length === 0) {
+            grid.innerHTML = '<div class="glass-card p-4 text-center text-muted" style="grid-column: 1/-1;">No saved algorithms yet. Draw or generate one in the Studio!</div>';
+            return;
+        }
 
         // Clear existing cards and rebuild with real data
         grid.innerHTML = '';
@@ -179,9 +294,36 @@ const Storage = (() => {
     }
 
     function escapeHtml(text) {
+        if (!text) return '';
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    /**
+     * Increment visualizer runs on backend
+     */
+    async function incrementRuns() {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        try {
+            const response = await fetch('/api/users/increment-runs', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                const statRunsCount = document.querySelector('#stat-runs-count');
+                if (statRunsCount && typeof data.visualizer_runs !== 'undefined') {
+                    statRunsCount.textContent = data.visualizer_runs;
+                }
+            }
+        } catch (e) {
+            console.warn('Failed to increment runs on backend:', e);
+        }
     }
 
     return {
@@ -191,6 +333,7 @@ const Storage = (() => {
         deleteProject,
         getStorageUsage,
         updateDashboardStats,
+        incrementRuns
     };
 })();
 
