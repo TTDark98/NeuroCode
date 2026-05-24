@@ -15,6 +15,15 @@ const AIGenerator = (() => {
     let selectedModel = localStorage.getItem('neurocode-ai-model') || 'qwen3.5:397b-cloud';
     let ollamaUrl = localStorage.getItem('neurocode-ollama-url') || OLLAMA_DEFAULT;
 
+    const NVIDIA_DEFAULT_MODELS = [
+        'meta/llama-3.1-405b-instruct',
+        'nvidia/llama-3.1-nemotron-70b-instruct',
+        'moonshotai/kimi-k1.5',
+        'meta/llama-3.1-70b-instruct',
+        'meta/llama-3.1-8b-instruct',
+        'mistralai/mixtral-8x22b-instruct-v0.1'
+    ];
+
     // Helper to fetch with retries for transient/high-demand errors (e.g. 503, 429)
     async function fetchWithRetry(url, options = {}, maxRetries = 3, initialDelay = 1000) {
         let retries = 0;
@@ -78,12 +87,46 @@ const AIGenerator = (() => {
         return localStorage.getItem('neurocode-gemini-key');
     }
 
+    function getNvidiaApiKey() {
+        const input = document.getElementById('ai-nvidia-key');
+        if (input && input.value.trim() !== '') {
+            localStorage.setItem('neurocode-nvidia-key', input.value.trim());
+            return input.value.trim();
+        }
+        return localStorage.getItem('neurocode-nvidia-key');
+    }
+
     // ─── Fetch available models ────────────────────
     async function fetchAvailableModels() {
         if (provider === 'ollama') {
             return fetchOllamaModels();
-        } else {
+        } else if (provider === 'gemini') {
             return fetchGeminiModels();
+        } else if (provider === 'nvidia') {
+            return fetchNvidiaModels();
+        }
+        return [];
+    }
+
+    async function fetchNvidiaModels() {
+        const apiKey = getNvidiaApiKey();
+        if (!apiKey) return NVIDIA_DEFAULT_MODELS;
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetchWithRetry('/api/nvidia/models', {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'X-Nvidia-Authorization': `Bearer ${apiKey}`
+                }
+            });
+            const data = await res.json();
+            if (data.data) {
+                return data.data.map(m => m.id);
+            }
+            return NVIDIA_DEFAULT_MODELS;
+        } catch (err) {
+            console.error("Error fetching NVIDIA models:", err);
+            return NVIDIA_DEFAULT_MODELS;
         }
     }
 
@@ -109,7 +152,7 @@ const AIGenerator = (() => {
             const data = await res.json();
             if (data.error) throw new Error(data.error.message);
             return data.models
-                .filter(m => m.name.startsWith('models/gemini') && m.supportedGenerationMethods.includes('generateContent'))
+                .filter(m => m.supportedGenerationMethods.includes('generateContent'))
                 .map(m => m.name.replace('models/', ''));
         } catch (err) {
             console.error("Error fetching Gemini models:", err);
@@ -117,7 +160,6 @@ const AIGenerator = (() => {
         }
     }
 
-    // ─── System Prompt ─────────────────────────────
     const SYSTEM_PROMPT = `You are NeuroCode AI, an algorithm visualization generator.
 You will be provided with raw algorithm code (e.g., C++, Java, JS) and optionally some sample input data.
 Your task is to analyze the code, understand its execution flow on the input data, and output a JSON object representing the visualization.
@@ -147,8 +189,12 @@ The JSON MUST conform exactly to this schema:
 
 IMPORTANT RULES:
 1. "defaultData" should be the parsed array or graph from the user's input data, or a sensible default if none provided.
-2. Simulate the algorithm step-by-step and generate an array of "steps".
+2. Simulate the algorithm step-by-step and generate an array of "steps". Limit the visualization to at most 15-20 key steps (e.g., actual swaps or findings) to keep generation fast and avoid token limit truncation.
 3. Return ONLY valid JSON. Do not use markdown code blocks. Just the raw JSON.`;
+
+    const CHAT_SYSTEM_PROMPT = `You are NeuroCode AI, an expert algorithm and computer science assistant.
+Answer the user's questions clearly, concisely, and helpfully. Focus on Big O time/space complexity, data structure behaviors, and coding patterns.
+Format your responses cleanly using standard markdown. Keep them under 3 brief paragraphs since they are rendered in a narrow chat sidebar.`;
 
     // ─── Generate via Ollama ───────────────────────
     async function generateViaOllama(codeStr, inputStr) {
@@ -225,6 +271,42 @@ IMPORTANT RULES:
         return data.candidates[0].content.parts[0].text;
     }
 
+    // ─── Generate via NVIDIA NIM ───────────────────
+    async function generateViaNvidia(codeStr, inputStr) {
+        const apiKey = getNvidiaApiKey();
+        if (!apiKey) {
+            throw new Error('NVIDIA API Key is required. Enter it in the settings modal.');
+        }
+
+        const userPrompt = `Code:\n${codeStr}\n\nInput Data:\n${inputStr}`;
+        const token = localStorage.getItem('token');
+        const response = await fetchWithRetry('/api/nvidia/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                'X-Nvidia-Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+                model: selectedModel || 'meta/llama3-70b-instruct',
+                messages: [
+                    { role: 'system', content: SYSTEM_PROMPT },
+                    { role: 'user', content: userPrompt }
+                ],
+                temperature: 0.2,
+                max_tokens: 4096,
+                stream: false
+            })
+        });
+
+        const data = await response.json();
+        if (data.error) {
+            throw new Error(data.error.message || 'NVIDIA API error');
+        }
+
+        return data.choices[0].message.content;
+    }
+
     // ─── Main entry point ─────────────────────────
     async function generateVisualization(codeStr, playgroundInputStr) {
         let jsonStr;
@@ -232,9 +314,14 @@ IMPORTANT RULES:
         try {
             if (provider === 'ollama') {
                 jsonStr = await generateViaOllama(codeStr, playgroundInputStr);
-            } else {
+            } else if (provider === 'gemini') {
                 jsonStr = await generateViaGemini(codeStr, playgroundInputStr);
+            } else if (provider === 'nvidia') {
+                jsonStr = await generateViaNvidia(codeStr, playgroundInputStr);
             }
+
+            // Clean up markdown block wraps if any
+            jsonStr = jsonStr.replace(/^```[a-zA-Z]*\n/gm, '').replace(/```$/gm, '').trim();
 
             // Parse the JSON
             const result = JSON.parse(jsonStr);
@@ -263,18 +350,76 @@ IMPORTANT RULES:
         }
     }
 
+    // ─── Unified Text Completion Helper ─────────────
+    async function generateTextCompletion(systemPrompt, userPrompt) {
+        if (provider === 'ollama') {
+            const response = await fetchWithRetry(`${ollamaUrl}/api/chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model: selectedModel,
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: userPrompt }
+                    ],
+                    stream: false
+                })
+            });
+            const data = await response.json();
+            if (data.error) throw new Error(data.error);
+            return data.message.content;
+        } else if (provider === 'gemini') {
+            const apiKey = getApiKey();
+            if (!apiKey) throw new Error('Gemini API Key is required. Set it in the settings modal.');
+            const url = `${GEMINI_BASE}${selectedModel}:generateContent?key=${apiKey}`;
+            const response = await fetchWithRetry(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    system_instruction: { parts: { text: systemPrompt } },
+                    contents: [{ parts: [{ text: userPrompt }] }],
+                    generationConfig: { temperature: 0.3 }
+                })
+            });
+            const data = await response.json();
+            if (data.error) throw new Error(data.error.message);
+            return data.candidates[0].content.parts[0].text;
+        } else if (provider === 'nvidia') {
+            const apiKey = getNvidiaApiKey();
+            if (!apiKey) throw new Error('NVIDIA API Key is required. Set it in the settings modal.');
+            const token = localStorage.getItem('token');
+            const response = await fetchWithRetry('/api/nvidia/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                    'X-Nvidia-Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                    model: selectedModel || 'meta/llama3-70b-instruct',
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: userPrompt }
+                    ],
+                    temperature: 0.3,
+                    max_tokens: 4096,
+                    stream: false
+                })
+            });
+            const data = await response.json();
+            if (data.error) throw new Error(data.error.message || 'NVIDIA API error');
+            return data.choices[0].message.content;
+        }
+        throw new Error('Unsupported AI provider.');
+    }
+
+    // ─── Dynamic AI Chat Response ───────────────────
+    async function generateChatResponse(userQuery) {
+        return generateTextCompletion(CHAT_SYSTEM_PROMPT, userQuery);
+    }
+
     // ─── Generate Code from Prompt ─────────────────
     async function generateCodeFromPrompt(promptStr) {
-        if (provider === 'ollama') {
-            if (!selectedModel || selectedModel.startsWith('gemini')) {
-                throw new Error(`Invalid Ollama model selection: "${selectedModel}". Please open settings and select a valid Ollama model.`);
-            }
-        } else {
-            if (!selectedModel || !selectedModel.startsWith('gemini')) {
-                throw new Error(`Invalid Gemini model selection: "${selectedModel}". Please open settings and select a valid Gemini model.`);
-            }
-        }
-
         const systemPrompt = `You are NeuroCode Architect, an AI assistant that writes clean, self-contained algorithms in C++ or Javascript.
 Given a request from the user, write the complete, clean algorithm code.
 Follow these guidelines:
@@ -284,49 +429,7 @@ Follow these guidelines:
 4. Make the code clean, well-commented, and suitable for algorithm visualization.
 5. Example: If the user asks for 'Bubble Sort', return the C++ bubbleSort function and nothing else.`;
 
-        let resultText;
-        if (provider === 'ollama') {
-            const response = await fetchWithRetry(`${ollamaUrl}/api/chat`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    model: selectedModel,
-                    messages: [
-                        { role: 'system', content: systemPrompt },
-                        { role: 'user', content: promptStr }
-                    ],
-                    stream: false
-                })
-            });
-            const data = await response.json();
-            if (data.error) throw new Error(data.error);
-            resultText = data.message.content;
-        } else {
-            const apiKey = getApiKey();
-            if (!apiKey) {
-                throw new Error('Gemini API Key is required. Set it in the settings modal.');
-            }
-            const url = `${GEMINI_BASE}${selectedModel}:generateContent?key=${apiKey}`;
-            const response = await fetchWithRetry(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    system_instruction: {
-                        parts: { text: systemPrompt }
-                    },
-                    contents: [{
-                        parts: [{ text: promptStr }]
-                    }],
-                    generationConfig: {
-                        temperature: 0.3
-                    }
-                })
-            });
-            const data = await response.json();
-            if (data.error) throw new Error(data.error.message);
-            resultText = data.candidates[0].content.parts[0].text;
-        }
-
+        let resultText = await generateTextCompletion(systemPrompt, promptStr);
         // Clean up markdown block wraps just in case
         resultText = resultText.replace(/^```[a-zA-Z]*\n/gm, '').replace(/```$/gm, '').trim();
         return resultText;
@@ -334,16 +437,6 @@ Follow these guidelines:
 
     // ─── Generate Pseudocode from Code ─────────────
     async function generatePseudocodeFromCode(codeStr) {
-        if (provider === 'ollama') {
-            if (!selectedModel || selectedModel.startsWith('gemini')) {
-                throw new Error(`Invalid Ollama model selection: "${selectedModel}". Please open settings and select a valid Ollama model.`);
-            }
-        } else {
-            if (!selectedModel || !selectedModel.startsWith('gemini')) {
-                throw new Error(`Invalid Gemini model selection: "${selectedModel}". Please open settings and select a valid Gemini model.`);
-            }
-        }
-
         const systemPrompt = `You are NeuroCode Architect, an AI assistant that analyzes code and explains algorithms.
 Given raw source code (e.g. C++ or Javascript), explain the algorithm step-by-step and write clean, readable pseudocode.
 Follow these guidelines:
@@ -352,49 +445,7 @@ Follow these guidelines:
 3. Keep it clear, precise, and well-structured, suitable for developers who want to understand the logic.
 4. Do NOT include any introductory or concluding text, notes, or meta-commentary. Start directly with the algorithm name or summary.`;
 
-        let resultText;
-        if (provider === 'ollama') {
-            const response = await fetchWithRetry(`${ollamaUrl}/api/chat`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    model: selectedModel,
-                    messages: [
-                        { role: 'system', content: systemPrompt },
-                        { role: 'user', content: codeStr }
-                    ],
-                    stream: false
-                })
-            });
-            const data = await response.json();
-            if (data.error) throw new Error(data.error);
-            resultText = data.message.content;
-        } else {
-            const apiKey = getApiKey();
-            if (!apiKey) {
-                throw new Error('Gemini API Key is required. Set it in the settings modal.');
-            }
-            const url = `${GEMINI_BASE}${selectedModel}:generateContent?key=${apiKey}`;
-            const response = await fetchWithRetry(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    system_instruction: {
-                        parts: { text: systemPrompt }
-                    },
-                    contents: [{
-                        parts: [{ text: codeStr }]
-                    }],
-                    generationConfig: {
-                        temperature: 0.3
-                    }
-                })
-            });
-            const data = await response.json();
-            if (data.error) throw new Error(data.error.message);
-            resultText = data.candidates[0].content.parts[0].text;
-        }
-
+        let resultText = await generateTextCompletion(systemPrompt, codeStr);
         // Clean up markdown block wraps if any
         resultText = resultText.replace(/^```[a-zA-Z]*\n/gm, '').replace(/```$/gm, '').trim();
         return resultText;
@@ -404,11 +455,12 @@ Follow these guidelines:
         generateVisualization,
         generateCodeFromPrompt,
         generatePseudocodeFromCode,
+        generateChatResponse,
         fetchAvailableModels,
         getProvider, setProvider,
         getModel, setModel,
         getOllamaUrl, setOllamaUrl,
-        getApiKey
+        getApiKey, getNvidiaApiKey
     };
 })();
 

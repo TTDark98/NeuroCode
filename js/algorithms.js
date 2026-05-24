@@ -580,6 +580,476 @@ export function dfs(adjacencyList, startNode = 0) {
     };
 }
 
+export function quickSort(inputArray) {
+    const arr = [...inputArray];
+    const n = arr.length;
+    const steps = [];
+    let comparisons = 0;
+    let swaps = 0;
+
+    const sortedIndices = new Set();
+
+    steps.push({
+        array: [...arr],
+        highlights: [],
+        action: 'start',
+        description: 'Starting Quick Sort — divide and conquer using Lomuto partitioning.',
+        comparisons: 0,
+        swaps: 0,
+    });
+
+    function quickSortRecursive(low, high) {
+        if (low > high) return;
+        if (low === high) {
+            sortedIndices.add(low);
+            steps.push({
+                array: [...arr],
+                highlights: Array.from(sortedIndices).map(idx => ({ index: idx, type: 'sorted' })),
+                action: 'sorted',
+                description: `Sub-array of size 1 [index ${low}]: element ${arr[low]} is sorted.`,
+                comparisons,
+                swaps,
+            });
+            return;
+        }
+
+        const pIdx = partition(low, high);
+        quickSortRecursive(low, pIdx - 1);
+        quickSortRecursive(pIdx + 1, high);
+    }
+
+    function partition(low, high) {
+        const pivot = arr[high];
+        const rangeHighlights = [];
+        for (let idx = low; idx < high; idx++) {
+            rangeHighlights.push({ index: idx, type: 'left' });
+        }
+        rangeHighlights.push({ index: high, type: 'mid' });
+        Array.from(sortedIndices).forEach(idx => {
+            rangeHighlights.push({ index: idx, type: 'sorted' });
+        });
+
+        steps.push({
+            array: [...arr],
+            highlights: rangeHighlights,
+            action: 'searching',
+            description: `Partitioning range [${low}..${high}] with pivot = ${pivot} at index ${high}`,
+            comparisons,
+            swaps,
+        });
+
+        let i = low - 1;
+        for (let j = low; j < high; j++) {
+            comparisons++;
+
+            const compHighlights = [
+                { index: j, type: 'compare' },
+                { index: high, type: 'mid' }
+            ];
+            if (i >= low) compHighlights.push({ index: i, type: 'current' });
+            Array.from(sortedIndices).forEach(idx => {
+                if (idx !== j && idx !== high && idx !== i) {
+                    compHighlights.push({ index: idx, type: 'sorted' });
+                }
+            });
+
+            steps.push({
+                array: [...arr],
+                highlights: compHighlights,
+                action: 'comparing',
+                description: `Comparing arr[${j}] = ${arr[j]} with pivot = ${pivot}`,
+                comparisons,
+                swaps,
+            });
+
+            if (arr[j] < pivot) {
+                i++;
+                if (i !== j) {
+                    [arr[i], arr[j]] = [arr[j], arr[i]];
+                    swaps++;
+
+                    const swapHighlights = [
+                        { index: i, type: 'swap' },
+                        { index: j, type: 'swap' }
+                    ];
+                    Array.from(sortedIndices).forEach(idx => {
+                        if (idx !== i && idx !== j) {
+                            swapHighlights.push({ index: idx, type: 'sorted' });
+                        }
+                    });
+
+                    steps.push({
+                        array: [...arr],
+                        highlights: swapHighlights,
+                        action: 'swapping',
+                        description: `Swapped arr[${i}] = ${arr[i]} and arr[${j}] = ${arr[j]} (element < pivot)`,
+                        comparisons,
+                        swaps,
+                    });
+                }
+            }
+        }
+
+        const pivotPos = i + 1;
+        if (pivotPos !== high) {
+            [arr[pivotPos], arr[high]] = [arr[high], arr[pivotPos]];
+            swaps++;
+
+            const swapHighlights = [
+                { index: pivotPos, type: 'swap' },
+                { index: high, type: 'swap' }
+            ];
+            Array.from(sortedIndices).forEach(idx => {
+                if (idx !== pivotPos && idx !== high) {
+                    swapHighlights.push({ index: idx, type: 'sorted' });
+                }
+            });
+
+            steps.push({
+                array: [...arr],
+                highlights: swapHighlights,
+                action: 'swapping',
+                description: `Placed pivot ${pivot} at its correct position index ${pivotPos}`,
+                comparisons,
+                swaps,
+            });
+        }
+
+        sortedIndices.add(pivotPos);
+
+        const sortedHighlights = Array.from(sortedIndices).map(idx => ({ index: idx, type: 'sorted' }));
+        steps.push({
+            array: [...arr],
+            highlights: sortedHighlights,
+            action: 'sorted',
+            description: `Pivot element ${arr[pivotPos]} is now in its final position index ${pivotPos}`,
+            comparisons,
+            swaps,
+        });
+
+        return pivotPos;
+    }
+
+    quickSortRecursive(0, n - 1);
+
+    const finalSortedHighlights = arr.map((_, idx) => ({ index: idx, type: 'sorted' }));
+    steps.push({
+        array: [...arr],
+        highlights: finalSortedHighlights,
+        action: 'done',
+        description: `Quick Sort complete! ${comparisons} comparisons, ${swaps} swaps.`,
+        comparisons,
+        swaps,
+    });
+
+    return {
+        steps,
+        complexity: { time: 'O(n log n)', space: 'O(log n)' },
+    };
+}
+
+export function linkedListInsert(inputArray, val, insertIdx) {
+    const arr = [...inputArray];
+    const steps = [];
+    
+    if (typeof val === 'string' && val.includes(',')) {
+        const parts = val.split(',');
+        const parsedVal = parseInt(parts[0].trim());
+        const parsedIdx = parseInt(parts[1].trim());
+        val = isNaN(parsedVal) ? 25 : parsedVal;
+        insertIdx = isNaN(parsedIdx) ? 2 : parsedIdx;
+    } else {
+        if (val === undefined || val === null) {
+            val = 25;
+        } else {
+            val = parseInt(val);
+            if (isNaN(val)) val = 25;
+        }
+        if (insertIdx === undefined || insertIdx === null) {
+            insertIdx = 2;
+        } else {
+            insertIdx = parseInt(insertIdx);
+            if (isNaN(insertIdx)) insertIdx = 2;
+        }
+    }
+    insertIdx = Math.max(0, Math.min(arr.length, insertIdx));
+
+    steps.push({
+        array: [...arr],
+        highlights: [],
+        pointers: [{ name: 'head', index: 0 }],
+        action: 'start',
+        description: `Starting Linked List Insertion. Target: insert value ${val} at index ${insertIdx}.`,
+        comparisons: 0,
+        swaps: 0,
+    });
+
+    steps.push({
+        array: [...arr],
+        highlights: [],
+        pointers: [{ name: 'head', index: 0 }],
+        newNode: { val: val, index: -1, state: 'detached' },
+        action: 'visiting',
+        description: `Allocated memory for a new node with data = ${val}.`,
+        comparisons: 0,
+        swaps: 0,
+    });
+
+    if (insertIdx === 0) {
+        steps.push({
+            array: [...arr],
+            highlights: [{ index: 0, type: 'compare' }],
+            pointers: [{ name: 'head', index: 0 }],
+            newNode: { val: val, index: 0, state: 'pointing' },
+            action: 'comparing',
+            description: `Pointing new node's next link to current head node (value ${arr[0] || 'NULL'}).`,
+            comparisons: 0,
+            swaps: 0,
+        });
+
+        const newArr = [val, ...arr];
+        steps.push({
+            array: newArr,
+            highlights: [{ index: 0, type: 'new' }],
+            pointers: [{ name: 'head', index: 0 }],
+            action: 'sorted',
+            description: `Updated head pointer to point to the new node. Insertion at head complete!`,
+            comparisons: 0,
+            swaps: 1,
+        });
+    } else {
+        let curr = 0;
+        
+        steps.push({
+            array: [...arr],
+            highlights: [{ index: 0, type: 'current' }],
+            pointers: [
+                { name: 'head', index: 0 },
+                { name: 'curr', index: 0 }
+            ],
+            newNode: { val: val, index: -1, state: 'detached' },
+            action: 'searching',
+            description: `Starting traversal from head node to locate insertion predecessor (index ${insertIdx - 1}).`,
+            comparisons: 0,
+            swaps: 0,
+        });
+
+        for (let i = 1; i < insertIdx; i++) {
+            curr = i;
+            steps.push({
+                array: [...arr],
+                highlights: [{ index: curr, type: 'current' }],
+                pointers: [
+                    { name: 'head', index: 0 },
+                    { name: 'prev', index: curr - 1 },
+                    { name: 'curr', index: curr }
+                ],
+                newNode: { val: val, index: -1, state: 'detached' },
+                action: 'searching',
+                description: `Traversed to next node at index ${curr} (value ${arr[curr]}).`,
+                comparisons: 0,
+                swaps: 0,
+            });
+        }
+
+        steps.push({
+            array: [...arr],
+            highlights: [{ index: curr, type: 'current' }],
+            pointers: [
+                { name: 'head', index: 0 },
+                { name: 'curr', index: curr }
+            ],
+            newNode: { val: val, index: curr + 1, state: 'pointing' },
+            action: 'comparing',
+            description: `Pointing new node's next to index ${curr + 1} (value ${arr[curr + 1] || 'NULL'}).`,
+            comparisons: 0,
+            swaps: 0,
+        });
+
+        const newArr = [...arr];
+        newArr.splice(insertIdx, 0, val);
+        steps.push({
+            array: newArr,
+            highlights: [{ index: insertIdx, type: 'new' }],
+            pointers: [
+                { name: 'head', index: 0 },
+                { name: 'curr', index: insertIdx - 1 },
+                { name: 'new', index: insertIdx }
+            ],
+            action: 'sorted',
+            description: `Updated previous node's next to point to the new node. Insertion complete!`,
+            comparisons: 0,
+            swaps: 1,
+        });
+    }
+
+    steps.push({
+        array: [...steps[steps.length - 1].array],
+        highlights: [],
+        pointers: [{ name: 'head', index: 0 }],
+        action: 'done',
+        description: `Linked List Insertion complete. New length: ${steps[steps.length - 1].array.length}`,
+        comparisons: 0,
+        swaps: 1,
+    });
+
+    return {
+        steps,
+        complexity: { time: 'O(N)', space: 'O(1)' },
+    };
+}
+
+export function linkedListDelete(inputArray, deleteIdx) {
+    const arr = [...inputArray];
+    const steps = [];
+
+    if (deleteIdx === undefined || deleteIdx === null) {
+        deleteIdx = 2;
+    } else {
+        deleteIdx = parseInt(deleteIdx);
+        if (isNaN(deleteIdx)) deleteIdx = 2;
+    }
+    if (arr.length === 0 || deleteIdx < 0 || deleteIdx >= arr.length) {
+        steps.push({
+            array: [...arr],
+            highlights: [],
+            pointers: arr.length > 0 ? [{ name: 'head', index: 0 }] : [],
+            action: 'done',
+            description: `Index ${deleteIdx} is out of bounds. Deletion aborted.`,
+            comparisons: 0,
+            swaps: 0,
+        });
+        return { steps, complexity: { time: 'O(1)', space: 'O(1)' } };
+    }
+
+    steps.push({
+        array: [...arr],
+        highlights: [],
+        pointers: [{ name: 'head', index: 0 }],
+        action: 'start',
+        description: `Starting Linked List Deletion. Target: delete node at index ${deleteIdx}.`,
+        comparisons: 0,
+        swaps: 0,
+    });
+
+    if (deleteIdx === 0) {
+        steps.push({
+            array: [...arr],
+            highlights: [{ index: 0, type: 'target' }],
+            pointers: [{ name: 'head', index: 0 }],
+            action: 'comparing',
+            description: `Locating head node (index 0, value ${arr[0]}) for deletion.`,
+            comparisons: 0,
+            swaps: 0,
+        });
+
+        const newArr = arr.slice(1);
+        steps.push({
+            array: newArr,
+            highlights: [],
+            pointers: newArr.length > 0 ? [{ name: 'head', index: 0 }] : [],
+            action: 'sorted',
+            description: `Updated head pointer to point to next node. Deletion complete!`,
+            comparisons: 0,
+            swaps: 1,
+        });
+    } else {
+        let curr = 0;
+
+        steps.push({
+            array: [...arr],
+            highlights: [{ index: 0, type: 'current' }],
+            pointers: [
+                { name: 'head', index: 0 },
+                { name: 'curr', index: 0 }
+            ],
+            action: 'searching',
+            description: `Starting traversal from head node to locate deletion predecessor (index ${deleteIdx - 1}).`,
+            comparisons: 0,
+            swaps: 0,
+        });
+
+        for (let i = 1; i < deleteIdx; i++) {
+            curr = i;
+            steps.push({
+                array: [...arr],
+                highlights: [{ index: curr, type: 'current' }],
+                pointers: [
+                    { name: 'head', index: 0 },
+                    { name: 'prev', index: curr - 1 },
+                    { name: 'curr', index: curr }
+                ],
+                action: 'searching',
+                description: `Traversed to next node at index ${curr} (value ${arr[curr]}).`,
+                comparisons: 0,
+                swaps: 0,
+            });
+        }
+
+        steps.push({
+            array: [...arr],
+            highlights: [
+                { index: curr, type: 'current' },
+                { index: deleteIdx, type: 'target' }
+            ],
+            pointers: [
+                { name: 'head', index: 0 },
+                { name: 'curr', index: curr },
+                { name: 'target', index: deleteIdx }
+            ],
+            action: 'comparing',
+            description: `Predecessor located (value ${arr[curr]}). Target node to delete: value ${arr[deleteIdx]} at index ${deleteIdx}.`,
+            comparisons: 0,
+            swaps: 0,
+        });
+
+        steps.push({
+            array: [...arr],
+            highlights: [
+                { index: curr, type: 'current' },
+                { index: deleteIdx, type: 'target' }
+            ],
+            pointers: [
+                { name: 'head', index: 0 },
+                { name: 'curr', index: curr },
+                { name: 'target', index: deleteIdx }
+            ],
+            bypassConnection: { from: curr, to: deleteIdx + 1 },
+            action: 'swapping',
+            description: `Updating predecessor's next pointer to bypass target node, pointing directly to index ${deleteIdx + 1} (value ${arr[deleteIdx + 1] || 'NULL'}).`,
+            comparisons: 0,
+            swaps: 0,
+        });
+
+        const newArr = [...arr];
+        newArr.splice(deleteIdx, 1);
+        steps.push({
+            array: newArr,
+            highlights: [],
+            pointers: [{ name: 'head', index: 0 }],
+            action: 'sorted',
+            description: `Removed target node from memory. Deletion complete!`,
+            comparisons: 0,
+            swaps: 1,
+        });
+    }
+
+    steps.push({
+        array: [...steps[steps.length - 1].array],
+        highlights: [],
+        pointers: steps[steps.length - 1].pointers,
+        action: 'done',
+        description: `Linked List Deletion complete. New length: ${steps[steps.length - 1].array.length}`,
+        comparisons: 0,
+        swaps: 1,
+    });
+
+    return {
+        steps,
+        complexity: { time: 'O(N)', space: 'O(1)' },
+    };
+}
+
 // ─────────────────────────────────────────
 // Algorithm Registry
 // ─────────────────────────────────────────
@@ -729,6 +1199,119 @@ void mergeSort(int arr[], int l, int r) {
 }`,
         description: 'Explores as far as possible along each branch before backtracking. Uses a stack (call stack for recursion) to remember which vertices to visit.',
     },
+    quickSort: {
+        name: 'Quick Sort',
+        fn: quickSort,
+        type: 'sorting',
+        category: 'Sorting',
+        defaultData: [45, 12, 56, 32, 8, 41, 28, 63],
+        code: `void quickSort(int arr[], int low, int high) {
+    if (low < high) {
+        int pi = partition(arr, low, high);
+        quickSort(arr, low, pi - 1);
+        quickSort(arr, pi + 1, high);
+    }
+}
+
+int partition(int arr[], int low, int high) {
+    int pivot = arr[high];
+    int i = (low - 1);
+    for (int j = low; j < high; j++) {
+        if (arr[j] < pivot) {
+            i++;
+            swap(arr[i], arr[j]);
+        }
+    }
+    swap(arr[i + 1], arr[high]);
+    return (i + 1);
+}`,
+        description: 'A divide-and-conquer sorting algorithm. Selects a pivot element and partitions the array such that elements smaller than the pivot are on the left and larger are on the right.',
+    },
+    linkedListInsert: {
+        name: 'Linked List Insertion',
+        fn: (inputArray, extraArgs) => {
+            let val = 25;
+            let insertIdx = 2;
+            if (typeof extraArgs === 'string') {
+                const parts = extraArgs.split(',').map(s => parseInt(s.trim()));
+                if (parts.length >= 1 && !isNaN(parts[0])) val = parts[0];
+                if (parts.length >= 2 && !isNaN(parts[1])) insertIdx = parts[1];
+            } else if (Array.isArray(extraArgs)) {
+                if (extraArgs.length >= 1 && extraArgs[0] !== undefined) val = extraArgs[0];
+                if (extraArgs.length >= 2 && extraArgs[1] !== undefined) insertIdx = extraArgs[1];
+            } else if (typeof extraArgs === 'number' && !isNaN(extraArgs)) {
+                val = extraArgs;
+            }
+            return linkedListInsert(inputArray, val, insertIdx);
+        },
+        type: 'linkedlist',
+        category: 'Linked List',
+        defaultData: [10, 20, 30, 40],
+        code: `struct Node {
+    int data;
+    Node* next;
+    Node(int val) : data(val), next(nullptr) {}
+};
+
+Node* insertNode(Node* head, int val, int index) {
+    Node* newNode = new Node(val);
+    if (index == 0) {
+        newNode->next = head;
+        return newNode;
+    }
+    Node* curr = head;
+    for (int i = 0; i < index - 1 && curr != nullptr; i++) {
+        curr = curr->next;
+    }
+    if (curr != nullptr) {
+        newNode->next = curr->next;
+        curr->next = newNode;
+    }
+    return head;
+}`,
+        description: 'Inserts a new element at a specified position in the linked list. Traverses the list to find the node preceding the target index and updates pointer addresses.',
+    },
+    linkedListDelete: {
+        name: 'Linked List Deletion',
+        fn: (inputArray, extraArgs) => {
+            let deleteIdx = 2;
+            if (typeof extraArgs === 'number') {
+                deleteIdx = extraArgs;
+            } else if (typeof extraArgs === 'string' && !isNaN(parseInt(extraArgs))) {
+                deleteIdx = parseInt(extraArgs);
+            }
+            return linkedListDelete(inputArray, deleteIdx);
+        },
+        type: 'linkedlist',
+        category: 'Linked List',
+        defaultData: [10, 20, 30, 40],
+        code: `struct Node {
+    int data;
+    Node* next;
+    Node(int val) : data(val), next(nullptr) {}
+};
+
+Node* deleteNode(Node* head, int index) {
+    if (head == nullptr) return nullptr;
+    if (index == 0) {
+        Node* temp = head;
+        head = head->next;
+        delete temp;
+        return head;
+    }
+    Node* curr = head;
+    for (int i = 0; i < index - 1 && curr != nullptr; i++) {
+        curr = curr->next;
+    }
+    if (curr != nullptr && curr->next != nullptr) {
+        Node* temp = curr->next;
+        curr->next = temp->next;
+        delete temp;
+    }
+    return head;
+}`,
+        description: 'Deletes the element at a specified index in the linked list. Traverses to the node before the target index and updates links to bypass the deleted node.',
+    },
 };
 
 /**
@@ -748,7 +1331,7 @@ export function runAlgorithm(algorithmKey, inputData, extraArgs) {
 
     if (algo.type === 'graph') {
         return algo.fn(inputData, extraArgs || 0);
-    } else if (algo.type === 'searching') {
+    } else if (algo.type === 'searching' || algo.type === 'linkedlist') {
         return algo.fn(inputData, extraArgs);
     } else {
         return algo.fn(inputData);

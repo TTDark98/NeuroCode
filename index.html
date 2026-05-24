@@ -60,9 +60,21 @@
                             <span class="material-symbols-outlined">notifications</span>
                         </button>
                     </div>
-                    <div class="user-avatar">
-                        <img alt="User Avatar" class="avatar-img" data-alt="Stylized avatar of a male developer"
-                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuDVcIe9ZT9DQI5mMwNKpm-zykqTRJPzLtMyQiTdsqBZBdEn6teIYpzmiTk2buZp86-mRYmCPsEU5HXOrE7hbJZkjjMVS1d6HGOmSAm0JDmRO3kL-ymM4NLBsO2bf7OraM2sswZSbYC0mNHoGfTGKuQW2_0SuuR8GPEsxC1BRs_85buWRuYPijvlc_yUV-s0ypbn4M40CYYfLf40GdzBaN7ST5NF0Osm0oYluYyqLGixWBdD8pyBlLSfss6Aen7PP18o6kjcUxNdJ_Q1" />
+                    <div class="user-profile-wrapper" style="position: relative;">
+                        <div class="user-avatar" id="user-avatar-trigger">
+                            <img alt="User Avatar" class="avatar-img" id="header-avatar-img" data-alt="Stylized avatar of a male developer"
+                                src="https://lh3.googleusercontent.com/aida-public/AB6AXuDVcIe9ZT9DQI5mMwNKpm-zykqTRJPzLtMyQiTdsqBZBdEn6teIYpzmiTk2buZp86-mRYmCPsEU5HXOrE7hbJZkjjMVS1d6HGOmSAm0JDmRO3kL-ymM4NLBsO2bf7OraM2sswZSbYC0mNHoGfTGKuQW2_0SuuR8GPEsxC1BRs_85buWRuYPijvlc_yUV-s0ypbn4M40CYYfLf40GdzBaN7ST5NF0Osm0oYluYyqLGixWBdD8pyBlLSfss6Aen7PP18o6kjcUxNdJ_Q1" />
+                        </div>
+                        <div class="profile-dropdown" id="profile-dropdown" style="display: none;">
+                            <button class="dropdown-item" id="btn-open-profile">
+                                <span class="material-symbols-outlined">person</span>
+                                <span>Profile</span>
+                            </button>
+                            <button class="dropdown-item" id="btn-logout-dropdown">
+                                <span class="material-symbols-outlined">logout</span>
+                                <span>Logout</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -115,11 +127,11 @@
                 </div>
                 <div class="glass-card stat-card">
                     <div class="stat-header">
-                        <span class="stat-label">Active Nodes</span>
-                        <span class="material-symbols-outlined text-primary">hub</span>
+                        <span class="stat-label">Time Spent</span>
+                        <span class="material-symbols-outlined text-primary">schedule</span>
                     </div>
-                    <div class="stat-value">42</div>
-                    <div class="stat-subtext">All systems operational</div>
+                    <div class="stat-value" id="stat-time-spent">0m</div>
+                    <div class="stat-subtext">Cumulative active learning</div>
                 </div>
                 <div class="glass-card stat-card">
                     <div class="stat-header">
@@ -285,7 +297,10 @@
                             <option value="BubbleSort.cpp">BubbleSort.cpp</option>
                             <option value="SelectionSort.cpp">SelectionSort.cpp</option>
                             <option value="MergeSort.cpp">MergeSort.cpp</option>
+                            <option value="QuickSort.cpp">QuickSort.cpp</option>
                             <option value="BinarySearch.cpp">BinarySearch.cpp</option>
+                            <option value="LinkedListInsert.cpp">LinkedListInsert.cpp</option>
+                            <option value="LinkedListDelete.cpp">LinkedListDelete.cpp</option>
                             <option value="BFS.cpp">BFS.cpp</option>
                             <option value="DFS.cpp">DFS.cpp</option>
                         </select>
@@ -331,10 +346,16 @@
                                 style="font-size: 0.875rem;">input</span>
                             <span id="playground-label">Array Values</span>
                         </div>
-                        <button class="btn-save-sm" id="btn-save-project">
-                            <span class="material-symbols-outlined" style="font-size: 0.875rem;">save</span>
-                            Save
-                        </button>
+                        <div class="flex gap-2">
+                            <button class="btn-save-sm" id="btn-save-project">
+                                <span class="material-symbols-outlined" style="font-size: 0.875rem;">save</span>
+                                Save
+                            </button>
+                            <button class="btn-delete-sm" id="btn-delete-project" style="display: none;">
+                                <span class="material-symbols-outlined" style="font-size: 0.875rem;">delete</span>
+                                Delete
+                            </button>
+                        </div>
                     </div>
                     <div class="playground-inputs">
                         <input type="text" class="playground-input" id="playground-input"
@@ -384,7 +405,7 @@
                         <span class="material-symbols-outlined">chevron_left</span>
                     </button>
                     <p class="info-card-title">Algorithm Stats</p>
-                    <div class="space-y-2">
+                    <div class="space-y-2" style="margin-bottom: 1rem;">
                         <div class="info-row">
                             <span class="info-label">Swaps</span>
                             <span class="info-value text-primary" id="info-swaps">0</span>
@@ -401,6 +422,11 @@
                             <span class="info-label">Space Complexity</span>
                             <span class="info-value text-yellow-600 dark:text-yellow-400" id="info-space">—</span>
                         </div>
+                    </div>
+                    <div class="divider" style="margin: 0.75rem 0; border-top: 1px solid rgba(255, 255, 255, 0.1);"></div>
+                    <p class="info-card-title">Step History</p>
+                    <div class="step-history-log" id="step-history-log">
+                        <!-- Step history lines list populated dynamically -->
                     </div>
                 </div>
             </section>
@@ -845,6 +871,7 @@
                     <select class="settings-select" id="ai-provider-select">
                         <option value="ollama">Ollama (Local LLM)</option>
                         <option value="gemini">Gemini API (Cloud LLM)</option>
+                        <option value="nvidia">NVIDIA NIM (Cloud LLM)</option>
                     </select>
                 </div>
                 <!-- Ollama Settings -->
@@ -857,6 +884,11 @@
                     <label for="ai-api-key" class="settings-label">Gemini API Key</label>
                     <input type="password" class="settings-input" id="ai-api-key" placeholder="Enter Gemini API Key">
                 </div>
+                <!-- NVIDIA Settings -->
+                <div class="settings-group" id="settings-nvidia-group" style="display: none;">
+                    <label for="ai-nvidia-key" class="settings-label">NVIDIA API Key</label>
+                    <input type="password" class="settings-input" id="ai-nvidia-key" placeholder="Enter NVIDIA API Key">
+                </div>
                 <!-- Model Selection -->
                 <div class="settings-group">
                     <label for="ai-model-select" class="settings-label">Model Selection</label>
@@ -867,6 +899,64 @@
             </div>
             <div class="modal-footer">
                 <button class="btn-primary w-full" id="btn-settings-save">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== PROFILE MODAL ========== -->
+    <div class="modal-overlay" id="profile-modal" style="display: none;">
+        <div class="modal-container">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <span class="material-symbols-outlined text-primary">person</span>
+                    <h3>Profile Settings</h3>
+                </div>
+                <button class="btn-modal-close" id="btn-profile-close" title="Close Profile">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- Avatar selection / upload area -->
+                <div class="settings-group text-center" style="display: flex; flex-direction: column; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem;">
+                    <label class="settings-label" style="margin-bottom: 0;">Profile Picture</label>
+                    <div class="avatar-preview-container" style="position: relative; width: 6rem; height: 6rem; margin-top: 0.25rem;">
+                        <img id="profile-avatar-preview" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDVcIe9ZT9DQI5mMwNKpm-zykqTRJPzLtMyQiTdsqBZBdEn6teIYpzmiTk2buZp86-mRYmCPsEU5HXOrE7hbJZkjjMVS1d6HGOmSAm0JDmRO3kL-ymM4NLBsO2bf7OraM2sswZSbYC0mNHoGfTGKuQW2_0SuuR8GPEsxC1BRs_85buWRuYPijvlc_yUV-s0ypbn4M40CYYfLf40GdzBaN7ST5NF0Osm0oYluYyqLGixWBdD8pyBlLSfss6Aen7PP18o6kjcUxNdJ_Q1" alt="Avatar Preview" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary); background-color: var(--card-bg);" />
+                        <label for="profile-avatar-upload" class="avatar-edit-badge" style="position: absolute; bottom: 0; right: 0; background: var(--primary); color: #fff; border-radius: 50%; width: 1.75rem; height: 1.75rem; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 2px solid var(--card-bg); transition: all 0.2s;">
+                            <span class="material-symbols-outlined" style="font-size: 1rem;">edit</span>
+                        </label>
+                        <input type="file" id="profile-avatar-upload" accept="image/*" style="display: none;" />
+                    </div>
+                </div>
+
+                <!-- Name Input -->
+                <div class="settings-group">
+                    <label for="profile-name" class="settings-label">Full Name</label>
+                    <input type="text" class="settings-input" id="profile-name" placeholder="Enter your full name">
+                </div>
+
+                <!-- Username Input (disabled or read-only) -->
+                <div class="settings-group">
+                    <label for="profile-username" class="settings-label">Username (Email)</label>
+                    <input type="text" class="settings-input" id="profile-username" readonly style="opacity: 0.6; cursor: not-allowed;">
+                </div>
+
+                <!-- Password Input -->
+                <div class="settings-group">
+                    <label for="profile-password" class="settings-label">New Password</label>
+                    <input type="password" class="settings-input" id="profile-password" placeholder="Enter new password (leave blank to keep current)">
+                </div>
+
+                <!-- Delete Account Option -->
+                <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
+                    <div style="flex: 1;">
+                        <h4 style="color: #ef4444; font-size: 0.9rem; margin-bottom: 0.25rem; font-weight: 600;">Danger Zone</h4>
+                        <p style="color: var(--text-slate-400); font-size: 0.75rem; line-height: 1.2;">Permanently delete account and all projects.</p>
+                    </div>
+                    <button class="btn-delete-sm" id="btn-delete-account" style="padding: 0.4rem 0.65rem; white-space: nowrap;">Delete Account</button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary w-full" id="btn-profile-save">Save Profile</button>
             </div>
         </div>
     </div>

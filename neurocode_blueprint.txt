@@ -28,7 +28,7 @@ Key UX/UI Layout Sections:
   theme selector (Dark Futuristic, Retro Pixel, Light Minimalist, Solarized Hacker,
   Neuro Blush), notifications, and user avatar.
 - Dashboard Page: Welcome header, stats grid (Algorithm counts, runs, storage, 
-  nodes), quick action cards, and a grid of recent projects.
+  time spent), quick action cards, and a grid of recent projects.
 - Studio Page: The main editor split-panel:
   - Left Panel: File selector dropdown, run button, copy button, AI provider toggle
     (Ollama/Gemini), model selector, custom input textbox, target input textbox.
@@ -327,6 +327,20 @@ preserving speed, reliability, and offline support for core algorithms.
 - Cleaned up modular backend structures by consolidating Express routes and database connections into a single `server.js` file.
 - Created `schema.sql` to represent database tables and dropped unnecessary `middleware/`, `routes/` folders, and `db.js`.
 - Integrated asynchronous projects loading/saving and visualizer execution run count tracking between client modules (`storage.js`, `main.js`) and the MariaDB server API.
+
+[2026-05-24T13:05:00+05:30]
+- Replaced the static, meaningless 'Active Nodes' card on the dashboard with a dynamic 'Time Spent' card tracking active user session time.
+- Migrated MariaDB schema to add the `time_spent` column (seconds, default 0) to the `users` table.
+- Added a backend authenticated endpoint `POST /api/users/increment-time` in `server.js` to increment time spent in the database.
+- Implemented real-time tracking in the frontend orchestrator (`js/main.js`) with local ticking (every 1 second) and database synchronization (every 30 seconds).
+- Updated storage helper (`js/storage.js`) to fetch time spent from profile verification and format it in human-readable Xh Ym style.
+
+[2026-05-24T13:35:00+05:30]
+- Added database column `steps_json` to `projects` table for caching trace steps, permitting instant loading of visualizations.
+- Integrated Saved Algorithms dropdown list (`#code-file-select`) loading and saving of projects with pre-existing visualization trace steps.
+- Configured NVIDIA NIM API provider in settings and `js/ai-generator.js` with static defaults and dynamic endpoint support.
+- Refined the AI Assistant slide-out chat fallback to dynamically query active LLMs (Ollama, Gemini, NVIDIA) when matching keywords are not found locally.
+- Redesigned visualizer stats sidebar: increased width from 12rem to 18rem to prevent text-wrapping overlaps, and added a Step History list trace log with active step highlighting and click-to-jump seeking capability.
 ================================================================================
 
 

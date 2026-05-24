@@ -6,6 +6,7 @@
 
 import StateStore from './state.js';
 import { ALGORITHMS } from './algorithms.js';
+import AIGenerator from './ai-generator.js';
 
 const Assistant = (() => {
     let panelEl = null;
@@ -146,17 +147,41 @@ const Assistant = (() => {
         addUserMessage(text);
         chatInput.value = '';
 
-        // Simulate thinking delay
-        setTimeout(() => {
-            const response = generateResponse(text);
-            addAssistantMessage(response);
-        }, 400 + Math.random() * 600);
+        // 1. Try local response first (fast, offline-friendly)
+        const localResponse = generateLocalResponse(text);
+        if (localResponse) {
+            setTimeout(() => {
+                addAssistantMessage(localResponse);
+            }, 300);
+            return;
+        }
+
+        // 2. Fall back to live LLM chat!
+        addAssistantMessage('🧠 *NeuroCode AI is thinking...*');
+
+        AIGenerator.generateChatResponse(text)
+            .then(reply => {
+                removeLastMessage();
+                addAssistantMessage(reply);
+            })
+            .catch(err => {
+                removeLastMessage();
+                addAssistantMessage(`⚠️ **Error:** ${err.message || 'Could not connect to AI engine.'}`);
+            });
+    }
+
+    function removeLastMessage() {
+        if (!chatBody) return;
+        const messages = chatBody.querySelectorAll('.chat-message');
+        if (messages.length > 0) {
+            messages[messages.length - 1].remove();
+        }
     }
 
     /**
      * Generate a response based on keyword matching
      */
-    function generateResponse(query) {
+    function generateLocalResponse(query) {
         const lower = query.toLowerCase();
 
         // Check if asking about a specific algorithm
@@ -192,14 +217,7 @@ const Assistant = (() => {
             }
         }
 
-        // Fallback responses
-        const fallbacks = [
-            'I can help you understand algorithms! Try asking:\n• "Explain Bubble Sort"\n• "What is time complexity?"\n• "Tips for Merge Sort"\n• "What is Big O notation?"',
-            'Hmm, I\'m not sure about that. I specialize in algorithm explanations. Try asking about sorting, searching, or graph algorithms!',
-            'That\'s a great question! While I can\'t answer that specifically, I can explain any of the algorithms in the library. What would you like to learn about?',
-        ];
-
-        return fallbacks[Math.floor(Math.random() * fallbacks.length)];
+        return null;
     }
 
     /**

@@ -48,8 +48,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (currentUser && currentUser.email) {
                 const welcomeTitle = document.querySelector('.welcome-title');
                 if (welcomeTitle) {
-                    const username = currentUser.email.split('@')[0];
-                    const capitalizedUser = username.charAt(0).toUpperCase() + username.slice(1);
+                    const displayName = currentUser.name || currentUser.email.split('@')[0];
+                    const capitalizedUser = displayName.charAt(0).toUpperCase() + displayName.slice(1);
                     welcomeTitle.textContent = `Welcome back, ${capitalizedUser}.`;
                 }
             }
@@ -58,18 +58,60 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Setup User Profile Logout trigger
-    const userAvatar = document.querySelector('.user-avatar');
-    if (userAvatar) {
-        userAvatar.style.cursor = 'pointer';
-        userAvatar.title = 'Click to Sign Out';
-        userAvatar.addEventListener('click', () => {
+    // Setup User Profile dropdown menu toggle
+    const avatarTrigger = document.getElementById('user-avatar-trigger');
+    const profileDropdown = document.getElementById('profile-dropdown');
+    
+    if (avatarTrigger && profileDropdown) {
+        avatarTrigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const visible = profileDropdown.style.display === 'flex';
+            profileDropdown.style.display = visible ? 'none' : 'flex';
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', () => {
+            profileDropdown.style.display = 'none';
+        });
+    }
+
+    // Logout via dropdown item
+    const btnLogoutDropdown = document.getElementById('btn-logout-dropdown');
+    if (btnLogoutDropdown) {
+        btnLogoutDropdown.style.cursor = 'pointer';
+        btnLogoutDropdown.addEventListener('click', () => {
             if (confirm('Are you sure you want to sign out?')) {
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');
                 window.location.href = './login.html';
             }
         });
+    }
+
+    // Sync header avatar and user details on load
+    if (token) {
+        fetch('/api/auth/verify', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        })
+        .then(res => res.ok ? res.json() : null)
+        .then(userData => {
+            if (userData) {
+                localStorage.setItem('user', JSON.stringify(userData));
+                
+                const welcomeTitle = document.querySelector('.welcome-title');
+                if (welcomeTitle) {
+                    const displayName = userData.name || userData.email.split('@')[0];
+                    const capitalizedUser = displayName.charAt(0).toUpperCase() + displayName.slice(1);
+                    welcomeTitle.textContent = `Welcome back, ${capitalizedUser}.`;
+                }
+
+                if (userData.avatar) {
+                    const headerAvatarImg = document.getElementById('header-avatar-img');
+                    if (headerAvatarImg) headerAvatarImg.src = userData.avatar;
+                }
+            }
+        })
+        .catch(err => console.warn('Header avatar sync failed:', err));
     }
 
     // ═══════════════════════════════════════
@@ -195,6 +237,77 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ═══════════════════════════════════════
+    // ACTIVE TIME SPENT TRACKING
+    // ═══════════════════════════════════════
+    let totalSecondsSpent = 0;
+    
+    // Fetch initial time_spent on load
+    const initialToken = localStorage.getItem('token');
+    if (initialToken) {
+        fetch('/api/auth/verify', {
+            headers: { 'Authorization': `Bearer ${initialToken}` }
+        })
+        .then(res => res.ok ? res.json() : null)
+        .then(userData => {
+            if (userData && typeof userData.time_spent !== 'undefined') {
+                totalSecondsSpent = userData.time_spent;
+                StateStore.set('timeSpent', totalSecondsSpent);
+                updateTimeSpentUI();
+            }
+        })
+        .catch(err => console.warn('Failed to get initial time spent:', err));
+    }
+
+    function updateTimeSpentUI() {
+        const statTimeSpent = document.querySelector('#stat-time-spent');
+        if (statTimeSpent) {
+            const mins = Math.floor(totalSecondsSpent / 60);
+            const hrs = Math.floor(mins / 60);
+            const remainingMins = mins % 60;
+            if (hrs > 0) {
+                statTimeSpent.textContent = `${hrs}h ${remainingMins}m`;
+            } else {
+                statTimeSpent.textContent = `${mins}m`;
+            }
+        }
+    }
+
+    // Local ticker: Increment locally every second and update UI
+    setInterval(() => {
+        totalSecondsSpent += 1;
+        StateStore.set('timeSpent', totalSecondsSpent);
+        // Only update UI if the page is currently active and it's the dashboard
+        const activePage = document.querySelector('.page-section.active');
+        if (activePage && activePage.id === 'page-dashboard') {
+            updateTimeSpentUI();
+        }
+    }, 1000);
+
+    // Sync ticker: Send interval increments to backend database every 30 seconds
+    setInterval(() => {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        fetch('/api/users/increment-time', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ seconds: 30 })
+        })
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+            if (data && typeof data.time_spent !== 'undefined') {
+                // Sync local count with server count to prevent drifts
+                totalSecondsSpent = data.time_spent;
+                StateStore.set('timeSpent', totalSecondsSpent);
+            }
+        })
+        .catch(err => console.warn('Time heartbeat sync failed:', err));
+    }, 30000);
+
+    // ═══════════════════════════════════════
     // INITIALIZE MODULES
     // ═══════════════════════════════════════
     Visualizer.init();
@@ -208,6 +321,46 @@ document.addEventListener('DOMContentLoaded', () => {
     const codeHighlight = document.getElementById('code-highlight');
     const lineNumbersEl = document.getElementById('line-numbers');
     const codeSelect = document.getElementById('code-file-select');
+
+    async function rebuildSavedAlgorithmsSelect() {
+        if (!codeSelect) return;
+
+        // Remove any existing saved project options
+        const toRemove = [];
+        for (let i = 0; i < codeSelect.options.length; i++) {
+            const opt = codeSelect.options[i];
+            if (opt.value.startsWith('saved:') || opt.classList.contains('saved-projects-header')) {
+                toRemove.push(opt);
+            }
+        }
+        toRemove.forEach(opt => opt.remove());
+
+        // Get saved projects
+        try {
+            const projects = await Storage.listProjects();
+            if (projects && projects.length > 0) {
+                // Add a divider option
+                const optGroup = document.createElement('option');
+                optGroup.disabled = true;
+                optGroup.value = "";
+                optGroup.textContent = "── Saved Algorithms ──";
+                optGroup.className = "saved-projects-header";
+                codeSelect.appendChild(optGroup);
+
+                projects.forEach(proj => {
+                    const opt = document.createElement('option');
+                    opt.value = `saved:${proj.name}`;
+                    opt.textContent = `${proj.name} (${proj.algorithm || 'custom'})`;
+                    codeSelect.appendChild(opt);
+                });
+            }
+        } catch (e) {
+            console.error('Error rebuilding saved algorithms select:', e);
+        }
+    }
+
+    // Initial rebuild on load
+    rebuildSavedAlgorithmsSelect();
 
     /**
      * Update syntax highlighting and line numbers
@@ -237,10 +390,13 @@ document.addEventListener('DOMContentLoaded', () => {
         updateCodeDisplay();
 
         StateStore.set('currentAlgorithm', algorithmKey);
+        StateStore.set('loadedProject', null);
 
         // Update visualization type
         if (algo.type === 'graph') {
             StateStore.set('visualizationType', 'graph');
+        } else if (algo.type === 'linkedlist') {
+            StateStore.set('visualizationType', 'linkedlist');
         } else {
             StateStore.set('visualizationType', 'bars');
         }
@@ -251,7 +407,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 'bubbleSort': 'BubbleSort.cpp',
                 'selectionSort': 'SelectionSort.cpp',
                 'mergeSort': 'MergeSort.cpp',
+                'quickSort': 'QuickSort.cpp',
                 'binarySearch': 'BinarySearch.cpp',
+                'linkedListInsert': 'LinkedListInsert.cpp',
+                'linkedListDelete': 'LinkedListDelete.cpp',
                 'bfs': 'BFS.cpp',
                 'dfs': 'DFS.cpp',
             };
@@ -289,6 +448,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function updateDeleteButtonVisibility() {
+        const btnDelete = document.getElementById('btn-delete-project');
+        if (!btnDelete) return;
+        if (codeSelect && codeSelect.value && codeSelect.value.startsWith('saved:')) {
+            btnDelete.style.display = 'inline-flex';
+        } else {
+            btnDelete.style.display = 'none';
+        }
+    }
+
     // Code file selector change
     if (codeSelect) {
         codeSelect.addEventListener('change', () => {
@@ -308,10 +477,64 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 StateStore.set('currentAlgorithm', null);
                 StateStore.set('steps', []);
+                StateStore.set('loadedProject', null);
                 
                 const canvasEl = document.getElementById('visualizer-canvas');
                 if (canvasEl) canvasEl.innerHTML = '';
                 
+                updateDeleteButtonVisibility();
+                return;
+            }
+
+            if (val && val.startsWith('saved:')) {
+                const projectName = val.substring(6);
+                Storage.loadProject(projectName).then(proj => {
+                    if (!proj) return;
+                    if (codeTextarea) {
+                        codeTextarea.value = proj.code || '';
+                        updateCodeDisplay();
+                    }
+                    if (playgroundInput) {
+                        playgroundInput.value = proj.inputData || '';
+                        const playgroundLabel = document.getElementById('playground-input-label');
+                        if (playgroundLabel) playgroundLabel.textContent = proj.algorithm || 'Custom Algorithm';
+                    }
+                    
+                    StateStore.set('currentAlgorithm', proj.algorithm || 'custom');
+                    StateStore.set('loadedProject', proj);
+                    
+                    if (proj.complexity) {
+                        StateStore.set('complexity', proj.complexity);
+                    } else {
+                        const complexityMapping = {
+                            'bubbleSort': { time: 'O(N^2)', space: 'O(1)' },
+                            'selectionSort': { time: 'O(N^2)', space: 'O(1)' },
+                            'mergeSort': { time: 'O(N log N)', space: 'O(N)' },
+                            'quickSort': { time: 'O(N log N)', space: 'O(log N)' },
+                            'binarySearch': { time: 'O(log N)', space: 'O(1)' },
+                            'linkedListInsert': { time: 'O(N)', space: 'O(1)' },
+                            'linkedListDelete': { time: 'O(N)', space: 'O(1)' },
+                            'bfs': { time: 'O(V + E)', space: 'O(V)' },
+                            'dfs': { time: 'O(V + E)', space: 'O(V)' },
+                        };
+                        const complexity = complexityMapping[proj.algorithm] || { time: '—', space: '—' };
+                        StateStore.set('complexity', complexity);
+                    }
+
+                    const isLinkedList = proj.algorithm === 'linkedlist' || ['linkedListInsert', 'linkedListDelete'].includes(proj.algorithm);
+                    StateStore.set('visualizationType', proj.algorithm === 'graph' ? 'graph' : (isLinkedList ? 'linkedlist' : 'bars'));
+                    
+                    if (proj.steps && proj.steps.length > 0) {
+                        StateStore.set('steps', proj.steps);
+                        StateStore.set('currentStep', 0);
+                    } else {
+                        StateStore.set('steps', []);
+                        StateStore.set('currentStep', 0);
+                        const canvasEl = document.getElementById('visualizer-canvas');
+                        if (canvasEl) canvasEl.innerHTML = '';
+                    }
+                    updateDeleteButtonVisibility();
+                });
                 return;
             }
 
@@ -320,12 +543,49 @@ document.addEventListener('DOMContentLoaded', () => {
                 'BubbleSort.cpp': 'bubbleSort',
                 'SelectionSort.cpp': 'selectionSort',
                 'MergeSort.cpp': 'mergeSort',
+                'QuickSort.cpp': 'quickSort',
                 'BinarySearch.cpp': 'binarySearch',
+                'LinkedListInsert.cpp': 'linkedListInsert',
+                'LinkedListDelete.cpp': 'linkedListDelete',
                 'BFS.cpp': 'bfs',
                 'DFS.cpp': 'dfs',
             };
             const algoKey = mapping[val];
             if (algoKey) loadAlgorithmToEditor(algoKey);
+            updateDeleteButtonVisibility();
+        });
+    }
+
+    // Delete project button listener
+    const btnDeleteProject = document.getElementById('btn-delete-project');
+    if (btnDeleteProject) {
+        btnDeleteProject.addEventListener('click', async () => {
+            const val = codeSelect.value;
+            if (!val || !val.startsWith('saved:')) return;
+            const projectName = val.substring(6);
+
+            if (confirm(`Are you sure you want to delete the saved algorithm "${projectName}"?`)) {
+                await Storage.deleteProject(projectName);
+                showToast(`Saved algorithm "${projectName}" deleted!`);
+                
+                if (codeSelect) codeSelect.value = 'new';
+                if (codeTextarea) codeTextarea.value = '';
+                updateCodeDisplay();
+                if (playgroundInput) playgroundInput.value = '';
+                
+                StateStore.setMany({
+                    currentAlgorithm: null,
+                    steps: [],
+                    loadedProject: null,
+                    currentStep: 0
+                });
+                const canvasEl = document.getElementById('visualizer-canvas');
+                if (canvasEl) canvasEl.innerHTML = '';
+
+                await rebuildSavedAlgorithmsSelect();
+                await Storage.updateDashboardStats();
+                updateDeleteButtonVisibility();
+            }
         });
     }
 
@@ -361,6 +621,10 @@ document.addEventListener('DOMContentLoaded', () => {
             playgroundInput.placeholder = 'Enter sorted array: 3, 8, 12, 18, 25, 32';
             playgroundInput.value = algo.defaultData.join(', ');
             if (playgroundLabel) playgroundLabel.textContent = 'Sorted Array';
+        } else if (algo.type === 'linkedlist') {
+            playgroundInput.placeholder = 'Enter node values: 10, 20, 30, 40';
+            playgroundInput.value = algo.defaultData.join(', ');
+            if (playgroundLabel) playgroundLabel.textContent = 'Linked List Nodes';
         } else {
             playgroundInput.placeholder = 'Enter array values: 45, 12, 56, 32, 8, 41';
             playgroundInput.value = algo.defaultData.join(', ');
@@ -369,11 +633,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Show/hide search target
         if (searchTargetGroup) {
-            searchTargetGroup.style.display = algo.type === 'searching' ? 'flex' : 'none';
-            if (searchTargetInput && algo.type === 'searching') {
-                // Pick a random element as default target
-                const data = algo.defaultData;
-                searchTargetInput.value = data[Math.floor(Math.random() * data.length)];
+            const isTargetNeeded = algo.type === 'searching' || algo.type === 'linkedlist';
+            searchTargetGroup.style.display = isTargetNeeded ? 'flex' : 'none';
+            if (searchTargetInput && isTargetNeeded) {
+                const targetLabel = searchTargetGroup.querySelector('.playground-input-label');
+                if (algorithmKey === 'linkedListInsert') {
+                    if (targetLabel) targetLabel.textContent = 'Val, Index';
+                    searchTargetInput.type = 'text';
+                    searchTargetInput.placeholder = 'val, idx';
+                    searchTargetInput.value = '25, 2';
+                } else if (algorithmKey === 'linkedListDelete') {
+                    if (targetLabel) targetLabel.textContent = 'Delete Index';
+                    searchTargetInput.type = 'number';
+                    searchTargetInput.placeholder = 'index';
+                    searchTargetInput.value = '2';
+                } else {
+                    if (targetLabel) targetLabel.textContent = 'Target';
+                    searchTargetInput.type = 'number';
+                    searchTargetInput.placeholder = 'Target value';
+                    const data = algo.defaultData;
+                    searchTargetInput.value = data[Math.floor(Math.random() * data.length)];
+                }
             }
         }
     }
@@ -383,6 +663,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ═══════════════════════════════════════
     const aiModelSelect = document.getElementById('ai-model-select');
     const aiApiKeyInput = document.getElementById('ai-api-key');
+    const aiNvidiaKeyInput = document.getElementById('ai-nvidia-key');
     const aiProviderSelect = document.getElementById('ai-provider-select');
     const aiOllamaUrlInput = document.getElementById('ai-ollama-url');
 
@@ -390,8 +671,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const prov = AIGenerator.getProvider();
         const ollamaGroup = document.getElementById('settings-ollama-group');
         const geminiGroup = document.getElementById('settings-gemini-group');
+        const nvidiaGroup = document.getElementById('settings-nvidia-group');
         if (ollamaGroup) ollamaGroup.style.display = prov === 'ollama' ? 'block' : 'none';
         if (geminiGroup) geminiGroup.style.display = prov === 'gemini' ? 'block' : 'none';
+        if (nvidiaGroup) nvidiaGroup.style.display = prov === 'nvidia' ? 'block' : 'none';
     }
 
     // Provider toggle
@@ -414,12 +697,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Gemini API key
+    let geminiKeyTimeout;
     if (aiApiKeyInput) {
         aiApiKeyInput.value = AIGenerator.getApiKey() || '';
-        aiApiKeyInput.addEventListener('change', () => {
-            if (aiApiKeyInput.value.trim() !== '') {
-                initAiModelDropdown();
-            }
+        aiApiKeyInput.addEventListener('input', () => {
+            clearTimeout(geminiKeyTimeout);
+            geminiKeyTimeout = setTimeout(() => {
+                if (aiApiKeyInput.value.trim() !== '') {
+                    initAiModelDropdown();
+                }
+            }, 800);
+        });
+    }
+
+    // NVIDIA API key
+    let nvidiaKeyTimeout;
+    if (aiNvidiaKeyInput) {
+        aiNvidiaKeyInput.value = AIGenerator.getNvidiaApiKey() || '';
+        aiNvidiaKeyInput.addEventListener('input', () => {
+            clearTimeout(nvidiaKeyTimeout);
+            nvidiaKeyTimeout = setTimeout(() => {
+                if (aiNvidiaKeyInput.value.trim() !== '') {
+                    initAiModelDropdown();
+                }
+            }, 800);
         });
     }
 
@@ -428,6 +729,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const prov = AIGenerator.getProvider();
         if (prov === 'gemini' && !AIGenerator.getApiKey()) return;
+        if (prov === 'nvidia' && !AIGenerator.getNvidiaApiKey()) return;
 
         aiModelSelect.innerHTML = '<option value="">Loading...</option>';
 
@@ -516,6 +818,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     localStorage.setItem('neurocode-gemini-key', key);
                 } else {
                     localStorage.removeItem('neurocode-gemini-key');
+                }
+            }
+            if (aiNvidiaKeyInput) {
+                const key = aiNvidiaKeyInput.value.trim();
+                if (key) {
+                    localStorage.setItem('neurocode-nvidia-key', key);
+                } else {
+                    localStorage.removeItem('neurocode-nvidia-key');
                 }
             }
             initAiModelDropdown();
@@ -679,9 +989,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function runCurrentAlgorithm() {
         const codeText = codeTextarea ? codeTextarea.value : '';
+        const inputVal = playgroundInput ? playgroundInput.value : '';
 
         if (!codeText.trim()) {
             showToast('Code editor is empty. Please enter or select an algorithm.');
+            return;
+        }
+
+        // Check if it matches the currently loaded saved project code and input exactly
+        const loadedProj = StateStore.get('loadedProject');
+        if (loadedProj && loadedProj.code && loadedProj.code.trim() === codeText.trim() && 
+            (loadedProj.inputData || '').trim() === inputVal.trim() && loadedProj.steps && loadedProj.steps.length > 0) {
+            
+            showToast('Using saved visualization steps (Instant playback).');
+            Player.reset();
+            StateStore.setMany({
+                steps: loadedProj.steps,
+                totalSteps: loadedProj.steps.length,
+                currentStep: 0,
+                complexity: loadedProj.complexity || { time: '—', space: '—' },
+                inputData: inputVal,
+                currentAlgorithm: loadedProj.algorithm || 'custom',
+                visualizationType: loadedProj.algorithm === 'graph' ? 'graph' : (['linkedlist', 'linkedListInsert', 'linkedListDelete'].includes(loadedProj.algorithm) ? 'linkedlist' : 'bars')
+            });
+            const loadedViz = loadedProj.algorithm === 'graph' ? 'graph' : (['linkedlist', 'linkedListInsert', 'linkedListDelete'].includes(loadedProj.algorithm) ? 'linkedlist' : 'bars');
+            updateVisualizerLegend(loadedViz);
             return;
         }
 
@@ -740,10 +1072,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     complexity: result.complexity,
                     inputData: inputData,
                     currentAlgorithm: customAlgoKey,
-                    visualizationType: customAlgo.type === 'graph' ? 'graph' : 'bars'
+                    visualizationType: customAlgo.type === 'graph' ? 'graph' : (customAlgo.type === 'linkedlist' ? 'linkedlist' : 'bars')
                 });
 
-                updateVisualizerLegend(customAlgo.type);
+                updateVisualizerLegend(customAlgo.type === 'linkedlist' ? 'linkedlist' : (customAlgo.type === 'graph' ? 'graph' : 'bars'));
                 showToast('Visualization generated by AI!');
                 
                 // Track execution run count in MariaDB
@@ -774,11 +1106,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 inputData = algo.defaultData;
             }
 
-            // Extra args for search algorithms
+            // Extra args for search and linked list algorithms
             let extraArgs;
             if (algo.type === 'searching' && searchTargetInput) {
                 const target = parseInt(searchTargetInput.value);
                 extraArgs = isNaN(target) ? undefined : target;
+            } else if (algoKey === 'linkedListInsert' && searchTargetInput) {
+                extraArgs = searchTargetInput.value;
+            } else if (algoKey === 'linkedListDelete' && searchTargetInput) {
+                extraArgs = parseInt(searchTargetInput.value);
             }
 
             // Sync selector value
@@ -786,7 +1122,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 'bubbleSort': 'BubbleSort.cpp',
                 'selectionSort': 'SelectionSort.cpp',
                 'mergeSort': 'MergeSort.cpp',
+                'quickSort': 'QuickSort.cpp',
                 'binarySearch': 'BinarySearch.cpp',
+                'linkedListInsert': 'LinkedListInsert.cpp',
+                'linkedListDelete': 'LinkedListDelete.cpp',
                 'bfs': 'BFS.cpp',
                 'dfs': 'DFS.cpp',
             };
@@ -795,7 +1134,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Set visualization type & current algorithm key
-            StateStore.set('visualizationType', algo.type === 'graph' ? 'graph' : 'bars');
+            const isLinkedList = algo.type === 'linkedlist' || ['linkedListInsert', 'linkedListDelete'].includes(algoKey);
+            StateStore.set('visualizationType', algo.type === 'graph' ? 'graph' : (isLinkedList ? 'linkedlist' : 'bars'));
             StateStore.set('currentAlgorithm', algoKey);
 
             // Run the algorithm locally
@@ -833,6 +1173,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="legend-box" style="background-color: #a855f7; margin-left: 0.5rem;"></div> Discovered
                 <div class="legend-box" style="background-color: #34d399; margin-left: 0.5rem;"></div> Visited
             `;
+        } else if (type === 'linkedlist') {
+            legend.innerHTML = `
+                <div class="legend-box" style="background-color: #06b6d4;"></div> Traversal Pointer
+                <div class="legend-box" style="background-color: #f59e0b; margin-left: 0.5rem;"></div> Predecessor
+                <div class="legend-box" style="background-color: #10b981; margin-left: 0.5rem;"></div> New/Inserted
+                <div class="legend-box" style="background-color: #ef4444; margin-left: 0.5rem;"></div> Target/Deleted
+            `;
         } else if (type === 'searching') {
             legend.innerHTML = `
                 <div class="legend-box" style="background-color: #3b82f6;"></div> Left
@@ -865,13 +1212,16 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!projectName) return;
 
             const success = await Storage.saveProject(projectName, {
-                algorithm: algoKey,
+                algorithm: algoKey || StateStore.get('visualizationType') || 'bars',
                 inputData: inputData,
                 code: code,
+                steps: StateStore.get('steps') || [],
+                complexity: StateStore.get('complexity') || null
             });
 
             if (success) {
                 showToast('Project saved successfully!');
+                rebuildSavedAlgorithmsSelect();
                 // Refresh dashboard stats
                 Storage.updateDashboardStats();
             } else {
@@ -888,9 +1238,6 @@ document.addEventListener('DOMContentLoaded', () => {
         navigateTo('studio');
 
         setTimeout(() => {
-            if (project.algorithm) {
-                loadAlgorithmToEditor(project.algorithm);
-            }
             if (project.code && codeTextarea) {
                 codeTextarea.value = project.code;
                 updateCodeDisplay();
@@ -898,6 +1245,34 @@ document.addEventListener('DOMContentLoaded', () => {
             if (project.inputData && playgroundInput) {
                 playgroundInput.value = project.inputData;
             }
+            if (codeSelect) {
+                const savedValue = `saved:${project.name}`;
+                let optionExists = Array.from(codeSelect.options).some(opt => opt.value === savedValue);
+                if (!optionExists) {
+                    rebuildSavedAlgorithmsSelect().then(() => {
+                        codeSelect.value = savedValue;
+                    });
+                } else {
+                    codeSelect.value = savedValue;
+                }
+            }
+            if (project.algorithm) {
+                StateStore.set('currentAlgorithm', project.algorithm);
+                StateStore.set('visualizationType', project.algorithm === 'graph' ? 'graph' : 'bars');
+            }
+            if (project.complexity) {
+                StateStore.set('complexity', project.complexity);
+            }
+            if (project.steps && project.steps.length > 0) {
+                StateStore.set('steps', project.steps);
+                StateStore.set('currentStep', 0);
+            } else {
+                StateStore.set('steps', []);
+                StateStore.set('currentStep', 0);
+                const canvasEl = document.getElementById('visualizer-canvas');
+                if (canvasEl) canvasEl.innerHTML = '';
+            }
+            StateStore.set('loadedProject', project);
         }, 400);
     });
 
@@ -1078,6 +1453,152 @@ document.addEventListener('DOMContentLoaded', () => {
         clearTimeout(resizeTimer);
         resizeTimer = setTimeout(() => Visualizer.refresh(), 250);
     });
+
+    // ═══════════════════════════════════════
+    // PROFILE MODAL HANDLERS
+    // ═══════════════════════════════════════
+    const profileModal = document.getElementById('profile-modal');
+    const btnOpenProfile = document.getElementById('btn-open-profile');
+    const btnProfileClose = document.getElementById('btn-profile-close');
+    const btnProfileSave = document.getElementById('btn-profile-save');
+    const profileAvatarUpload = document.getElementById('profile-avatar-upload');
+    const profileAvatarPreview = document.getElementById('profile-avatar-preview');
+    const btnDeleteAccount = document.getElementById('btn-delete-account');
+
+    if (btnOpenProfile && profileModal) {
+        btnOpenProfile.addEventListener('click', () => {
+            profileModal.style.display = 'flex';
+            
+            const token = localStorage.getItem('token');
+            if (token) {
+                fetch('/api/auth/verify', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })
+                .then(res => res.ok ? res.json() : null)
+                .then(userData => {
+                    if (userData) {
+                        document.getElementById('profile-name').value = userData.name || '';
+                        document.getElementById('profile-username').value = userData.email || '';
+                        if (userData.avatar) {
+                            profileAvatarPreview.src = userData.avatar;
+                        }
+                    }
+                })
+                .catch(err => console.error('Failed to load profile details:', err));
+            }
+        });
+    }
+
+    if (btnProfileClose && profileModal) {
+        btnProfileClose.addEventListener('click', () => {
+            profileModal.style.display = 'none';
+        });
+    }
+
+    if (profileAvatarUpload && profileAvatarPreview) {
+        profileAvatarUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (file.size > 1024 * 1024) {
+                showToast('Avatar image must be smaller than 1MB.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                profileAvatarPreview.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    if (btnProfileSave) {
+        btnProfileSave.addEventListener('click', () => {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+
+            const name = document.getElementById('profile-name').value;
+            const password = document.getElementById('profile-password').value;
+            const avatar = profileAvatarPreview.src;
+
+            const originalHtml = btnProfileSave.innerHTML;
+            btnProfileSave.disabled = true;
+            btnProfileSave.innerHTML = `<span class="material-symbols-outlined spin" style="font-size: 0.875rem;">autorenew</span> Saving...`;
+
+            fetch('/api/auth/profile', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ name, password, avatar })
+            })
+            .then(async res => {
+                if (res.ok) {
+                    const data = await res.json();
+                    showToast('Profile updated successfully!');
+                    
+                    const headerAvatarImg = document.getElementById('header-avatar-img');
+                    if (headerAvatarImg && data.user.avatar) {
+                        headerAvatarImg.src = data.user.avatar;
+                    }
+                    
+                    document.getElementById('profile-password').value = '';
+                    profileModal.style.display = 'none';
+                } else {
+                    const errData = await res.json();
+                    showToast(errData.error || 'Failed to update profile.');
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                showToast('Network error updating profile.');
+            })
+            .finally(() => {
+                btnProfileSave.disabled = false;
+                btnProfileSave.innerHTML = originalHtml;
+            });
+        });
+    }
+
+    if (btnDeleteAccount) {
+        btnDeleteAccount.addEventListener('click', () => {
+            const confirm1 = confirm('WARNING: Deleting your account will permanently delete all your projects and stats. This is irreversible. Are you sure you want to proceed?');
+            if (!confirm1) return;
+
+            const confirm2 = prompt("Please type 'DELETE' to permanently delete your account:");
+            if (confirm2 !== 'DELETE') {
+                showToast('Account deletion cancelled.');
+                return;
+            }
+
+            const token = localStorage.getItem('token');
+            if (!token) return;
+
+            fetch('/api/auth/profile', {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            .then(async res => {
+                if (res.ok) {
+                    showToast('Account successfully deleted. Redirecting...');
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    setTimeout(() => {
+                        window.location.href = './login.html';
+                    }, 1500);
+                } else {
+                    const errData = await res.json();
+                    showToast(errData.error || 'Failed to delete account.');
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                showToast('Error deleting account.');
+            });
+        });
+    }
 
     // ═══════════════════════════════════════
     // INITIAL LOAD

@@ -19,6 +19,7 @@ const StateStore = (() => {
         visualizationType: 'bars', // 'bars' | 'graph' | 'linkedlist'
         savedProjects: [],
         editorCode: '',
+        loadedProject: null,
     };
 
     // Subscribers: { key: [callback, ...] }

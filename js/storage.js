@@ -3,6 +3,8 @@
    Save/load algorithm projects and user data from MariaDB backend.
    ====================================== */
 
+import StateStore from './state.js';
+
 const STORAGE_KEY = 'neurocode-projects';
 const MAX_STORAGE_MB = 5; // localStorage limit ~5MB
 
@@ -17,7 +19,29 @@ const Storage = (() => {
         if (!token) {
             try {
                 const raw = localStorage.getItem(STORAGE_KEY);
-                return raw ? JSON.parse(raw) : [];
+                const parsedRaw = raw ? JSON.parse(raw) : [];
+                return parsedRaw.map(p => {
+                    let steps = null;
+                    let complexity = null;
+                    if (p.steps) {
+                        if (Array.isArray(p.steps)) {
+                            steps = p.steps;
+                        } else if (p.steps && typeof p.steps === 'object') {
+                            steps = p.steps.steps || null;
+                            complexity = p.steps.complexity || null;
+                        }
+                    }
+                    return {
+                        id: p.id,
+                        name: p.name,
+                        algorithm: p.algorithm,
+                        inputData: p.inputData,
+                        code: p.code,
+                        steps: steps,
+                        complexity: complexity || p.complexity || null,
+                        timestamp: p.timestamp
+                    };
+                });
             } catch {
                 return [];
             }
@@ -33,19 +57,60 @@ const Storage = (() => {
                 throw new Error('Failed to fetch projects from server');
             }
             const dbProjects = await response.json();
-            return dbProjects.map(p => ({
-                id: p.id,
-                name: p.name,
-                algorithm: p.visualization_type,
-                inputData: p.input_data,
-                code: p.code,
-                timestamp: new Date(p.updated_at || p.created_at).getTime()
-            }));
+            return dbProjects.map(p => {
+                let steps = null;
+                let complexity = null;
+                if (p.steps_json) {
+                    try {
+                        const parsed = JSON.parse(p.steps_json);
+                        if (Array.isArray(parsed)) {
+                            steps = parsed;
+                        } else if (parsed && typeof parsed === 'object') {
+                            steps = parsed.steps || null;
+                            complexity = parsed.complexity || null;
+                        }
+                    } catch (e) {
+                        console.error("Error parsing steps_json:", e);
+                    }
+                }
+                return {
+                    id: p.id,
+                    name: p.name,
+                    algorithm: p.visualization_type,
+                    inputData: p.input_data,
+                    code: p.code,
+                    steps: steps,
+                    complexity: complexity,
+                    timestamp: new Date(p.updated_at || p.created_at).getTime()
+                };
+            });
         } catch (e) {
             console.warn('Failed to load projects from backend, falling back to localStorage:', e);
             try {
                 const raw = localStorage.getItem(STORAGE_KEY);
-                return raw ? JSON.parse(raw) : [];
+                const parsedRaw = raw ? JSON.parse(raw) : [];
+                return parsedRaw.map(p => {
+                    let steps = null;
+                    let complexity = null;
+                    if (p.steps) {
+                        if (Array.isArray(p.steps)) {
+                            steps = p.steps;
+                        } else if (p.steps && typeof p.steps === 'object') {
+                            steps = p.steps.steps || null;
+                            complexity = p.steps.complexity || null;
+                        }
+                    }
+                    return {
+                        id: p.id,
+                        name: p.name,
+                        algorithm: p.algorithm,
+                        inputData: p.inputData,
+                        code: p.code,
+                        steps: steps,
+                        complexity: complexity || p.complexity || null,
+                        timestamp: p.timestamp
+                    };
+                });
             } catch {
                 return [];
             }
@@ -55,7 +120,7 @@ const Storage = (() => {
     /**
      * Save a project (upsert by name)
      */
-    async function saveProject(name, { algorithm, inputData, code }) {
+    async function saveProject(name, { algorithm, inputData, code, steps, complexity }) {
         const projects = await listProjects();
         const existing = projects.findIndex(p => p.name === name);
 
@@ -64,6 +129,7 @@ const Storage = (() => {
             algorithm,
             inputData,
             code,
+            steps: { steps, complexity },
             timestamp: Date.now(),
         };
 
@@ -96,7 +162,8 @@ const Storage = (() => {
                     name,
                     code,
                     input_data: inputData,
-                    visualization_type: algorithm
+                    visualization_type: algorithm,
+                    steps_json: steps ? JSON.stringify({ steps, complexity }) : null
                 })
             });
 
@@ -196,9 +263,10 @@ const Storage = (() => {
             storageBar.style.width = usage.percentage + '%';
         }
 
-        // Update "Visualizations Run" stat from user profile on MariaDB
+        // Update "Visualizations Run" and "Time Spent" stat from user profile on MariaDB
         const statRunsCount = document.querySelector('#stat-runs-count');
-        if (statRunsCount) {
+        const statTimeSpent = document.querySelector('#stat-time-spent');
+        if (statRunsCount || statTimeSpent) {
             const token = localStorage.getItem('token');
             if (token) {
                 try {
@@ -209,12 +277,17 @@ const Storage = (() => {
                     });
                     if (response.ok) {
                         const userData = await response.json();
-                        if (userData && typeof userData.visualizer_runs !== 'undefined') {
+                        if (statRunsCount && userData && typeof userData.visualizer_runs !== 'undefined') {
                             statRunsCount.textContent = userData.visualizer_runs;
+                        }
+                        if (statTimeSpent && userData && typeof userData.time_spent !== 'undefined') {
+                            const stateTime = StateStore.get('timeSpent');
+                            const displayTime = (typeof stateTime !== 'undefined' && stateTime > userData.time_spent) ? stateTime : userData.time_spent;
+                            statTimeSpent.textContent = formatTimeSpent(displayTime);
                         }
                     }
                 } catch (e) {
-                    console.warn('Failed to fetch user runs from server:', e);
+                    console.warn('Failed to fetch user stats from server:', e);
                 }
             }
         }
@@ -276,6 +349,21 @@ const Storage = (() => {
 
             grid.appendChild(card);
         });
+    }
+
+    /**
+     * Helper: format active seconds spent to Xh Ym
+     */
+    function formatTimeSpent(seconds) {
+        if (!seconds || seconds <= 0) return '0m';
+        const mins = Math.floor(seconds / 60);
+        const hrs = Math.floor(mins / 60);
+        const remainingMins = mins % 60;
+        
+        if (hrs > 0) {
+            return `${hrs}h ${remainingMins}m`;
+        }
+        return `${mins}m`;
     }
 
     /**
