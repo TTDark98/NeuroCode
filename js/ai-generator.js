@@ -25,7 +25,7 @@ const AIGenerator = (() => {
     ];
 
     // Helper to fetch with retries for transient/high-demand errors (e.g. 503, 429)
-    async function fetchWithRetry(url, options = {}, maxRetries = 3, initialDelay = 1000) {
+    async function fetchWithRetry(url, options = {}, maxRetries = 3, initialDelay = 1000, timeoutMs = 120000) {
         let retries = 0;
         while (true) {
             try {
@@ -44,7 +44,14 @@ const AIGenerator = (() => {
                 
                 return response;
             } catch (err) {
-                // Also retry on network level connection failures
+                const isTimeout = err.name === 'AbortError';
+
+                // Do NOT retry on timeouts — fail immediately with a clear message
+                if (isTimeout) {
+                    throw new Error(`Request timed out after ${timeoutMs / 1000}s. The AI provider may be unreachable or overloaded.`);
+                }
+
+                // Retry on network-level connection failures only
                 if (retries < maxRetries) {
                     retries++;
                     const delay = initialDelay * Math.pow(2, retries - 1);
@@ -160,37 +167,26 @@ const AIGenerator = (() => {
         }
     }
 
-    const SYSTEM_PROMPT = `You are NeuroCode AI, an algorithm visualization generator.
-You will be provided with raw algorithm code (e.g., C++, Java, JS) and optionally some sample input data.
-Your task is to analyze the code, understand its execution flow on the input data, and output a JSON object representing the visualization.
-
-The JSON MUST conform exactly to this schema:
+    const SYSTEM_PROMPT = `You are NeuroCode AI. Given algorithm code and input data, output a raw JavaScript object (NOT JSON, NOT markdown) with this exact shape:
 {
-  "name": "Name of the Algorithm",
-  "category": "Sorting | Searching | Graph Theory | Dynamic Programming",
-  "type": "bars" | "searching" | "graph",
-  "defaultData": [array of numbers or graph adjacency list structure],
-  "steps": [
-    {
-      "array": [array state at this step (for bars/searching)],
-      "highlights": [
-        { "index": number, "type": "current" | "compare" | "swap" | "sorted" | "found" | "left" | "right" | "mid" }
-      ],
-      "swaps": number (cumulative total),
-      "comparisons": number (cumulative total),
-      "description": "Short explanation of what is happening in this step"
-    }
-  ],
-  "complexity": {
-    "time": "O(...)",
-    "space": "O(...)"
+  name: "Algorithm Name",
+  category: "Sorting",
+  type: "bars",
+  defaultData: [the input array],
+  complexity: { time: "O(n²)", space: "O(1)" },
+  run: function(inputData) {
+    const arr = [...inputData];
+    const steps = [];
+    let comparisons = 0, swaps = 0;
+    steps.push({ array: [...arr], highlights: [], action: 'start', description: 'Starting...', comparisons, swaps });
+    // YOUR ALGORITHM HERE - push a step for each compare/swap
+    // comparisons++; steps.push({array:[...arr], highlights:[{index:i,type:'compare'},{index:j,type:'compare'}], action:'comparing', description:'...', comparisons, swaps});
+    // After swap: swaps++; steps.push({array:[...arr], highlights:[{index:i,type:'swap'}], action:'swapping', description:'...', comparisons, swaps});
+    // Final: steps.push({array:[...arr], highlights: arr.map((_,i)=>({index:i,type:'sorted'})), action:'done', description:'Done!', comparisons, swaps});
+    return { steps, complexity: { time: "O(...)", space: "O(...)" } };
   }
 }
-
-IMPORTANT RULES:
-1. "defaultData" should be the parsed array or graph from the user's input data, or a sensible default if none provided.
-2. Simulate the algorithm step-by-step and generate an array of "steps". Limit the visualization to at most 15-20 key steps (e.g., actual swaps or findings) to keep generation fast and avoid token limit truncation.
-3. Return ONLY valid JSON. Do not use markdown code blocks. Just the raw JSON.`;
+Rules: Output ONLY the raw JS object. No markdown. No text before/after. The run function generates steps at runtime—do not precompute them.`;
 
     const CHAT_SYSTEM_PROMPT = `You are NeuroCode AI, an expert algorithm and computer science assistant.
 Answer the user's questions clearly, concisely, and helpfully. Focus on Big O time/space complexity, data structure behaviors, and coding patterns.
@@ -204,27 +200,112 @@ Format your responses cleanly using standard markdown. Keep them under 3 brief p
 
         const userPrompt = `Code:\n${codeStr}\n\nInput Data:\n${inputStr}`;
 
-        const response = await fetchWithRetry(`${ollamaUrl}/api/chat`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                model: selectedModel,
-                messages: [
-                    { role: 'system', content: SYSTEM_PROMPT },
-                    { role: 'user', content: userPrompt }
-                ],
-                stream: false,
-                format: 'json'
-            })
-        });
-
-        const data = await response.json();
-
-        if (data.error) {
-            throw new Error(data.error);
+        // UI Elements for live log
+        const logModal = document.getElementById('ai-stream-modal');
+        const logContent = document.getElementById('ai-stream-content');
+        const logStatus = document.getElementById('ai-stream-status');
+        
+        if (logModal && logContent && logStatus) {
+            logContent.textContent = '';
+            logStatus.textContent = 'Connecting to Local Ollama...';
+            logStatus.style.color = ''; // Reset error color
+            logModal.style.display = 'flex';
+            requestAnimationFrame(() => {
+                logModal.classList.add('open');
+            });
+            
+            const closeBtn = document.getElementById('btn-close-ai-stream');
+            const hideBtn = document.getElementById('btn-hide-ai-stream');
+            const hideHandler = () => {
+                logModal.classList.remove('open');
+                setTimeout(() => { logModal.style.display = 'none'; }, 300);
+            };
+            if (closeBtn) closeBtn.onclick = hideHandler;
+            if (hideBtn) hideBtn.onclick = hideHandler;
         }
 
-        return data.message.content;
+        let accumulated = '';
+        let tokenCount = 0;
+
+        try {
+            const response = await fetchWithRetry(`${ollamaUrl}/api/chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model: selectedModel,
+                    messages: [
+                        { role: 'system', content: SYSTEM_PROMPT },
+                        { role: 'user', content: userPrompt }
+                    ],
+                    stream: true,
+                    options: { temperature: 0.0 }
+                })
+            });
+
+            // Read the NDJSON stream and accumulate tokens with live progress
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value, { stream: true });
+                const lines = chunk.split('\n');
+
+                for (const line of lines) {
+                    if (!line.trim()) continue;
+                    try {
+                        const parsed = JSON.parse(line);
+                        const content = parsed.message?.content;
+                        
+                        if (content) {
+                            accumulated += content;
+                            tokenCount++;
+                            
+                            // Update live modal UI
+                            if (logContent) {
+                                logContent.textContent += content;
+                                logContent.parentElement.scrollTop = logContent.parentElement.scrollHeight;
+                            }
+
+                            // Update live progress every 5 tokens
+                            if (tokenCount % 5 === 0) {
+                                const msg = `🧠 AI generating... ${accumulated.length} chars received (${tokenCount} tokens)`;
+                                document.dispatchEvent(new CustomEvent('show-toast', { detail: msg }));
+                                if (logStatus) logStatus.textContent = msg;
+                            }
+                        }
+                        
+                        if (parsed.error) {
+                            throw new Error(parsed.error);
+                        }
+                    } catch (e) {
+                        // Skip malformed chunk
+                    }
+                }
+            }
+
+            if (logStatus) logStatus.textContent = '✅ Generation complete!';
+            if (logModal) {
+                setTimeout(() => {
+                    logModal.classList.remove('open');
+                    setTimeout(() => { logModal.style.display = 'none'; }, 300);
+                }, 2000);
+            }
+        } catch (err) {
+            if (logStatus) {
+                logStatus.textContent = `❌ Error: ${err.message}`;
+                logStatus.style.color = '#ef4444';
+            }
+            throw err;
+        }
+
+        if (!accumulated) {
+            throw new Error('Ollama returned an empty response.');
+        }
+
+        return accumulated;
     }
 
     // ─── Generate via Gemini ──────────────────────
@@ -252,8 +333,7 @@ Format your responses cleanly using standard markdown. Keep them under 3 brief p
                     parts: [{ text: userPrompt }]
                 }],
                 generationConfig: {
-                    temperature: 0.2,
-                    response_mime_type: 'application/json'
+                    temperature: 0.0
                 }
             })
         });
@@ -271,7 +351,7 @@ Format your responses cleanly using standard markdown. Keep them under 3 brief p
         return data.candidates[0].content.parts[0].text;
     }
 
-    // ─── Generate via NVIDIA NIM ───────────────────
+    // ─── Generate via NVIDIA NIM (with streaming + live progress) ───
     async function generateViaNvidia(codeStr, inputStr) {
         const apiKey = getNvidiaApiKey();
         if (!apiKey) {
@@ -280,51 +360,158 @@ Format your responses cleanly using standard markdown. Keep them under 3 brief p
 
         const userPrompt = `Code:\n${codeStr}\n\nInput Data:\n${inputStr}`;
         const token = localStorage.getItem('token');
-        const response = await fetchWithRetry('/api/nvidia/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-                'X-Nvidia-Authorization': `Bearer ${apiKey}`
-            },
-            body: JSON.stringify({
-                model: selectedModel || 'meta/llama3-70b-instruct',
-                messages: [
-                    { role: 'system', content: SYSTEM_PROMPT },
-                    { role: 'user', content: userPrompt }
-                ],
-                temperature: 0.2,
-                max_tokens: 4096,
-                stream: false
-            })
-        });
 
-        const data = await response.json();
-        if (data.error) {
-            throw new Error(data.error.message || 'NVIDIA API error');
+        document.dispatchEvent(new CustomEvent('show-toast', { detail: '🔌 Connecting to NVIDIA API...' }));
+        console.time('⚡ NVIDIA Streaming Request');
+
+        // UI Elements for live log
+        const logModal = document.getElementById('ai-stream-modal');
+        const logContent = document.getElementById('ai-stream-content');
+        const logStatus = document.getElementById('ai-stream-status');
+        
+        if (logModal && logContent && logStatus) {
+            logContent.textContent = '';
+            logStatus.textContent = 'Connecting...';
+            logStatus.style.color = ''; // Reset error color
+            logModal.style.display = 'flex';
+            requestAnimationFrame(() => {
+                logModal.classList.add('open');
+            });
+            
+            // Setup close handlers
+            const closeBtn = document.getElementById('btn-close-ai-stream');
+            const hideBtn = document.getElementById('btn-hide-ai-stream');
+            const hideHandler = () => {
+                logModal.classList.remove('open');
+                setTimeout(() => { logModal.style.display = 'none'; }, 300);
+            };
+            if (closeBtn) closeBtn.onclick = hideHandler;
+            if (hideBtn) hideBtn.onclick = hideHandler;
         }
 
-        return data.choices[0].message.content;
+        let accumulated = '';
+        let tokenCount = 0;
+
+        try {
+            const response = await fetch('/api/nvidia/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                    'X-Nvidia-Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                    model: selectedModel || 'meta/llama3-70b-instruct',
+                    messages: [
+                        { role: 'system', content: SYSTEM_PROMPT },
+                        { role: 'user', content: userPrompt }
+                    ],
+                    temperature: 0.0,
+                    max_tokens: 4096,
+                    stream: true
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error?.message || `NVIDIA API returned HTTP ${response.status}`);
+            }
+
+            // Read the SSE stream and accumulate tokens with live progress
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value, { stream: true });
+                const lines = chunk.split('\n');
+
+                for (const line of lines) {
+                    if (!line.startsWith('data: ')) continue;
+                    const data = line.slice(6).trim();
+                    if (data === '[DONE]') continue;
+
+                    try {
+                        const parsed = JSON.parse(data);
+                        const content = parsed.choices?.[0]?.delta?.content;
+                        if (content) {
+                            accumulated += content;
+                            tokenCount++;
+                            
+                            // Update live modal UI
+                            if (logContent) {
+                                logContent.textContent += content;
+                                // Auto-scroll to bottom
+                                logContent.parentElement.scrollTop = logContent.parentElement.scrollHeight;
+                            }
+
+                            // Update live progress every 5 tokens
+                            if (tokenCount % 5 === 0) {
+                                const msg = `🧠 AI generating... ${accumulated.length} chars received (${tokenCount} tokens)`;
+                                document.dispatchEvent(new CustomEvent('show-toast', { detail: msg }));
+                                if (logStatus) logStatus.textContent = msg;
+                            }
+                        }
+                    } catch (e) {
+                        // Skip malformed SSE chunks
+                    }
+                }
+            }
+
+            console.timeEnd('⚡ NVIDIA Streaming Request');
+
+            document.dispatchEvent(new CustomEvent('show-toast', {
+                detail: `✅ AI generation complete! ${accumulated.length} chars, ${tokenCount} tokens`
+            }));
+            
+            if (logStatus) logStatus.textContent = '✅ Generation complete!';
+            // Auto-close modal after 2 seconds
+            if (logModal) {
+                setTimeout(() => {
+                    logModal.classList.remove('open');
+                    setTimeout(() => { logModal.style.display = 'none'; }, 300);
+                }, 2000);
+            }
+        } catch (err) {
+            console.timeEnd('⚡ NVIDIA Streaming Request');
+            if (logStatus) {
+                logStatus.textContent = `❌ Error: ${err.message}`;
+                logStatus.style.color = '#ef4444';
+            }
+            throw err;
+        }
+
+        if (!accumulated) {
+            throw new Error('NVIDIA API returned an empty response.');
+        }
+
+        return accumulated;
     }
 
     // ─── Main entry point ─────────────────────────
     async function generateVisualization(codeStr, playgroundInputStr) {
-        let jsonStr;
+        let jsObjStr;
 
+        console.time('⚡ AI Total Generation Time');
         try {
+            console.time('⚡ AI Network Request');
             if (provider === 'ollama') {
-                jsonStr = await generateViaOllama(codeStr, playgroundInputStr);
+                jsObjStr = await generateViaOllama(codeStr, playgroundInputStr);
             } else if (provider === 'gemini') {
-                jsonStr = await generateViaGemini(codeStr, playgroundInputStr);
+                jsObjStr = await generateViaGemini(codeStr, playgroundInputStr);
             } else if (provider === 'nvidia') {
-                jsonStr = await generateViaNvidia(codeStr, playgroundInputStr);
+                jsObjStr = await generateViaNvidia(codeStr, playgroundInputStr);
             }
+            console.timeEnd('⚡ AI Network Request');
 
             // Clean up markdown block wraps if any
-            jsonStr = jsonStr.replace(/^```[a-zA-Z]*\n/gm, '').replace(/```$/gm, '').trim();
+            jsObjStr = jsObjStr.replace(/^```[a-zA-Z]*\n/gm, '').replace(/```$/gm, '').trim();
 
-            // Parse the JSON
-            const result = JSON.parse(jsonStr);
+            console.time('⚡ JS Eval + Registration');
+            // Evaluate the JS Object String into a real JS Object
+            const result = new Function("return " + jsObjStr)();
 
             // Register it as custom AI algorithm
             ALGORITHMS['custom_ai'] = {
@@ -334,17 +521,18 @@ Format your responses cleanly using standard markdown. Keep them under 3 brief p
                 complexity: result.complexity || { time: 'O(?)', space: 'O(?)' },
                 defaultData: result.defaultData || [],
                 code: codeStr,
-                run: function(inputData, searchTarget) {
-                    return {
-                        steps: result.steps,
-                        complexity: result.complexity
-                    };
+                run: result.run || function(inputData, searchTarget) {
+                    return { steps: [], complexity: { time: 'O(?)', space: 'O(?)' } };
                 }
             };
+            console.timeEnd('⚡ JS Eval + Registration');
+            console.timeEnd('⚡ AI Total Generation Time');
 
             return 'custom_ai';
 
         } catch (err) {
+            console.timeEnd('⚡ AI Network Request');
+            console.timeEnd('⚡ AI Total Generation Time');
             console.error("AI Generation Error:", err);
             throw err;
         }
@@ -362,7 +550,8 @@ Format your responses cleanly using standard markdown. Keep them under 3 brief p
                         { role: 'system', content: systemPrompt },
                         { role: 'user', content: userPrompt }
                     ],
-                    stream: false
+                    stream: false,
+                    options: { temperature: 0.0 }
                 })
             });
             const data = await response.json();
@@ -378,7 +567,7 @@ Format your responses cleanly using standard markdown. Keep them under 3 brief p
                 body: JSON.stringify({
                     system_instruction: { parts: { text: systemPrompt } },
                     contents: [{ parts: [{ text: userPrompt }] }],
-                    generationConfig: { temperature: 0.3 }
+                    generationConfig: { temperature: 0.0 }
                 })
             });
             const data = await response.json();
@@ -401,7 +590,7 @@ Format your responses cleanly using standard markdown. Keep them under 3 brief p
                         { role: 'system', content: systemPrompt },
                         { role: 'user', content: userPrompt }
                     ],
-                    temperature: 0.3,
+                    temperature: 0.0,
                     max_tokens: 4096,
                     stream: false
                 })

@@ -386,14 +386,19 @@ app.get('/api/nvidia/models', authMiddleware, async (req, res) => {
     }
 });
 
-// Proxy NVIDIA chat completions request to bypass CORS
+// Proxy NVIDIA chat completions request to bypass CORS (supports streaming)
 app.post('/api/nvidia/chat/completions', authMiddleware, async (req, res) => {
     const authHeader = req.headers['x-nvidia-authorization'];
     if (!authHeader) {
         return res.status(400).json({ error: 'NVIDIA Authorization key is required' });
     }
 
+    const isStreaming = req.body.stream === true;
+
     try {
+        console.log(`[NVIDIA Proxy] Sending ${isStreaming ? 'streaming' : 'non-streaming'} request to NVIDIA API (model: ${req.body.model})`);
+        const startTime = Date.now();
+
         const response = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
             method: 'POST',
             headers: {
@@ -402,9 +407,40 @@ app.post('/api/nvidia/chat/completions', authMiddleware, async (req, res) => {
             },
             body: JSON.stringify(req.body)
         });
-        
-        const data = await response.json();
-        res.status(response.status).json(data);
+
+        console.log(`[NVIDIA Proxy] Got response status ${response.status} in ${Date.now() - startTime}ms`);
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: { message: `HTTP ${response.status}` } }));
+            return res.status(response.status).json(errorData);
+        }
+
+        if (isStreaming && response.body) {
+            // Pipe SSE stream directly through to the client
+            res.setHeader('Content-Type', 'text/event-stream');
+            res.setHeader('Cache-Control', 'no-cache');
+            res.setHeader('Connection', 'keep-alive');
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+
+            try {
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    res.write(decoder.decode(value, { stream: true }));
+                }
+            } catch (streamErr) {
+                console.error('[NVIDIA Proxy] Stream read error:', streamErr.message);
+            } finally {
+                res.end();
+                console.log(`[NVIDIA Proxy] Stream completed in ${Date.now() - startTime}ms`);
+            }
+        } else {
+            const data = await response.json();
+            console.log(`[NVIDIA Proxy] Non-streaming completed in ${Date.now() - startTime}ms`);
+            res.status(response.status).json(data);
+        }
     } catch (err) {
         console.error('NVIDIA Proxy Completions Error:', err);
         res.status(500).json({ error: 'Failed to proxy request to NVIDIA API' });

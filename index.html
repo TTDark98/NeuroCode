@@ -961,6 +961,25 @@
         </div>
     </div>
 
+    <!-- AI Live Streaming Log Modal -->
+    <div class="modal-overlay" id="ai-stream-modal" style="display: none; z-index: 9999;">
+        <div class="modal-content" style="max-width: 800px; width: 90%; max-height: 80vh; display: flex; flex-direction: column;">
+            <div class="modal-header">
+                <h3 class="modal-title">🧠 AI Live Thought Stream</h3>
+                <button class="btn-icon" id="btn-close-ai-stream">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="modal-body" style="flex: 1; overflow-y: auto; background: #0f172a; padding: 1rem; border-radius: 8px; font-family: 'VT323', monospace; color: #10b981; font-size: 1.1rem; border: 1px solid #1e293b;">
+                <pre id="ai-stream-content" style="white-space: pre-wrap; word-wrap: break-word; margin: 0;"></pre>
+            </div>
+            <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+                <span id="ai-stream-status" style="color: var(--text-slate-400); font-size: 0.875rem;">Connecting...</span>
+                <button class="btn-primary" id="btn-hide-ai-stream">Hide Log</button>
+            </div>
+        </div>
+    </div>
+
     <script type="module" src="js/main.js"></script>
 </body>
 
