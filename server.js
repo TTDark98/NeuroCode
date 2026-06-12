@@ -854,6 +854,8 @@ app.post('/api/nvidia/chat/completions', authMiddleware, async (req, res) => {
             res.setHeader('Content-Type', 'text/event-stream');
             res.setHeader('Cache-Control', 'no-cache');
             res.setHeader('Connection', 'keep-alive');
+            res.setHeader('X-Accel-Buffering', 'no');
+            res.flushHeaders(); // Flush headers to resolve client's fetch promise immediately
 
             const reader = response.body.getReader();
             const decoder = new TextDecoder();

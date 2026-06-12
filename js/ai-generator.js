@@ -167,26 +167,67 @@ const AIGenerator = (() => {
         }
     }
 
-    const SYSTEM_PROMPT = `You are NeuroCode AI. Given algorithm code and input data, output a raw JavaScript object (NOT JSON, NOT markdown) with this exact shape:
+    const SYSTEM_PROMPT = `You are NeuroCode AI. Given algorithm code and input data, output a raw JavaScript object (NOT JSON, NOT markdown) representing the visualization configuration.
+Based on the code, determine the visualization type: "bars" (default for arrays/sorting/searching), "graph" (for graphs/trees/shortest path), or "linkedlist" (for linked lists).
+
+Output this exact shape:
 {
   name: "Algorithm Name",
-  category: "Sorting",
-  type: "bars",
-  defaultData: [the input array],
-  complexity: { time: "O(n²)", space: "O(1)" },
+  category: "Sorting" | "Searching" | "Graphs" | "Lists",
+  type: "bars" | "graph" | "linkedlist",
+  defaultData: [default input data matching the type],
+  complexity: { time: "O(...)", space: "O(...)" },
   run: function(inputData) {
-    const arr = [...inputData];
-    const steps = [];
-    let comparisons = 0, swaps = 0;
-    steps.push({ array: [...arr], highlights: [], action: 'start', description: 'Starting...', comparisons, swaps });
-    // YOUR ALGORITHM HERE - push a step for each compare/swap
-    // comparisons++; steps.push({array:[...arr], highlights:[{index:i,type:'compare'},{index:j,type:'compare'}], action:'comparing', description:'...', comparisons, swaps});
-    // After swap: swaps++; steps.push({array:[...arr], highlights:[{index:i,type:'swap'}], action:'swapping', description:'...', comparisons, swaps});
-    // Final: steps.push({array:[...arr], highlights: arr.map((_,i)=>({index:i,type:'sorted'})), action:'done', description:'Done!', comparisons, swaps});
-    return { steps, complexity: { time: "O(...)", space: "O(...)" } };
+     // Your algorithm execution logic here.
+     // Generate and return steps trace.
+     return { steps: [...], complexity: { time: "...", space: "..." } };
   }
 }
-Rules: Output ONLY the raw JS object. No markdown. No text before/after. The run function generates steps at runtime—do not precompute them.`;
+
+Step Structures based on type:
+
+1. For type: "bars" (Input: number[]):
+Each step should look like:
+{
+  array: number[],
+  highlights: [{ index: number, type: 'compare'|'swap'|'sorted'|'current'|'found'|'left'|'right'|'mid' }],
+  action: string,
+  description: string,
+  comparisons: number, // running total
+  swaps: number // running total
+}
+
+2. For type: "graph" (Input: adjacencyList object { 0: [1, 2], ... }):
+Each step should look like:
+{
+  graph: {
+    adjacencyList: { 0: [1, 2], ... },
+    nodes: number[] // e.g. [0, 1, 2, ...]
+  },
+  visited: Set or Array of node IDs,
+  currentNode: number | string | null, // current active node
+  highlights: [{ node: number, type: 'current'|'compare' }],
+  action: string,
+  description: string
+}
+
+3. For type: "linkedlist" (Input: number[]):
+Each step should look like:
+{
+  array: number[],
+  highlights: [{ index: number, type: 'current'|'compare'|'new'|'target' }],
+  newNode: { val: number, index: number, state: 'pointing'|'idle' } (optional),
+  pointers: [{ name: string, index: number }] (optional, e.g. [{ name: 'curr', index: 1 }]),
+  bypassConnection: { from: number, to: number } (optional, for deletion),
+  action: string,
+  description: string
+}
+
+Rules:
+1. Output ONLY the raw JS object. No markdown, no text before/after.
+2. The run function generates steps at runtime based on the dynamic inputData passed to it—do not precompute the steps.
+3. Ensure the return object from the run function matches { steps, complexity }.`;
+
 
     const CHAT_SYSTEM_PROMPT = `You are NeuroCode AI, an expert algorithm and computer science assistant.
 Answer the user's questions clearly, concisely, and helpfully. Focus on Big O time/space complexity, data structure behaviors, and coding patterns.
@@ -616,7 +657,8 @@ Follow these guidelines:
 2. Do NOT wrap the code in markdown code blocks (e.g. \`\`\`cpp).
 3. Do NOT include any introductory or concluding text, explanations, or notes.
 4. Make the code clean, well-commented, and suitable for algorithm visualization.
-5. Example: If the user asks for 'Bubble Sort', return the C++ bubbleSort function and nothing else.`;
+5. Example: If the user asks for 'Bubble Sort', return the C++ bubbleSort function and nothing else.
+6. Write plain, vanilla C/C++ code. Use raw basic arrays (e.g. \`int arr[]\`, \`int* arr\`) rather than C++ STL containers like \`<vector>\` or complex libraries. Stick to simple, standard header files (like \`<iostream>\`, \`<stdio.h>\`) unless vectors or advanced classes/libraries are explicitly requested by the user.`;
 
         let resultText = await generateTextCompletion(systemPrompt, promptStr);
         // Clean up markdown block wraps just in case
