@@ -421,7 +421,7 @@ const Storage = (() => {
      */
     async function getContributions() {
         const token = localStorage.getItem('token');
-        if (!token) return [];
+        if (!token) return { activities: [], active_days: 0 };
         try {
             const response = await fetch('/api/users/contributions', {
                 headers: { 'Authorization': `Bearer ${token}` }
@@ -429,10 +429,10 @@ const Storage = (() => {
             if (response.ok) {
                 return await response.json();
             }
-            return [];
+            return { activities: [], active_days: 0 };
         } catch (e) {
             console.warn('Failed to fetch contributions:', e);
-            return [];
+            return { activities: [], active_days: 0 };
         }
     }
 

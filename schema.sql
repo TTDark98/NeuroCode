@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS projects (
 CREATE TABLE IF NOT EXISTS user_activity_log (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
-    activity_type ENUM('save_project', 'run_visualizer', 'share_project', 'upvote_project') NOT NULL,
+    activity_type ENUM('save_project', 'run_visualizer', 'share_project', 'upvote_project', 'bootstrap_generated') NOT NULL,
     activity_date DATE NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,

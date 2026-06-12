@@ -1520,132 +1520,219 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
-            // 3. Render Contribution Calendar (GitHub-style 53 weeks)
-            const calendarEl = document.getElementById('contribution-calendar');
-            
-            if (calendarEl) {
-                const contributionsMap = {};
-                contributions.forEach(c => {
-                    const dateStr = new Date(c.activity_date).toISOString().slice(0, 10);
-                    contributionsMap[dateStr] = (contributionsMap[dateStr] || 0) + c.count;
+            // 3. Render Practice Streak Heatmap
+            const heatmapGrid = document.getElementById('heatmap-grid');
+            const heatmapContainer = document.getElementById('heatmap-container');
+            const heatmapEmpty = document.getElementById('heatmap-empty');
+            const heatmapStats = document.getElementById('heatmap-stats');
+            const heatmapYearEl = document.getElementById('heatmap-year');
+            const heatmapMonths = document.getElementById('heatmap-months');
+            const heatmapDayLabels = document.getElementById('heatmap-day-labels');
+            const heatmapTooltip = document.getElementById('heatmap-tooltip');
+
+            if (heatmapGrid) {
+                const currentYear = new Date().getFullYear();
+                if (heatmapYearEl) heatmapYearEl.textContent = currentYear;
+
+                // Build activity map: { 'YYYY-MM-DD': { score, types: { type: count } } }
+                const activityMap = {};
+                const activities = contributions.activities || [];
+
+                activities.forEach(row => {
+                    const dateStr = new Date(row.activity_date).toISOString().slice(0, 10);
+                    if (!activityMap[dateStr]) {
+                        activityMap[dateStr] = { score: 0, types: {} };
+                    }
+                    activityMap[dateStr].types[row.activity_type] = (activityMap[dateStr].types[row.activity_type] || 0) + row.count;
                 });
 
-                // We only show the current year since the app didn't exist before
-                const currentYear = new Date().getFullYear();
+                // Compute activity scores
+                const typeWeights = {
+                    save_project: 3,
+                    run_visualizer: 1,
+                    share_project: 2,
+                    upvote_project: 1,
+                    bootstrap_generated: 2
+                };
+                Object.keys(activityMap).forEach(dateStr => {
+                    const entry = activityMap[dateStr];
+                    let score = 0;
+                    Object.entries(entry.types).forEach(([type, count]) => {
+                        score += (typeWeights[type] || 1) * count;
+                    });
+                    entry.score = score;
+                });
 
-                // Setup Year List
-                const yearListContainer = document.getElementById('year-selector-list');
-                if (yearListContainer) {
-                    yearListContainer.innerHTML = '';
-                    const yBtn = document.createElement('button');
-                    yBtn.className = 'btn-secondary active';
-                    yBtn.textContent = currentYear;
-                    yBtn.style.padding = '0.25rem 0.75rem';
-                    yBtn.style.fontSize = '0.85rem';
-                    yBtn.style.background = 'var(--primary)';
-                    yBtn.style.color = '#fff';
-                    yBtn.style.border = 'none';
-                    yBtn.style.borderRadius = '4px';
-                    yBtn.style.cursor = 'pointer';
-                    yearListContainer.appendChild(yBtn);
+                const activeDays = contributions.active_days || 0;
+                const hasActivity = activeDays > 0;
+
+                // Show/hide states
+                if (hasActivity) {
+                    if (heatmapContainer) heatmapContainer.style.display = '';
+                    if (heatmapEmpty) heatmapEmpty.style.display = 'none';
+                } else {
+                    if (heatmapContainer) heatmapContainer.style.display = 'none';
+                    if (heatmapEmpty) heatmapEmpty.style.display = '';
+                    if (heatmapStats) heatmapStats.innerHTML = '';
                 }
 
-                function renderCalendarForYear(targetYear, map) {
-                    calendarEl.innerHTML = '';
-                    calendarEl.style.gridAutoFlow = 'column';
-                    
-                    const monthsEl = document.getElementById('contribution-months');
-                    if (monthsEl) monthsEl.innerHTML = '';
+                // Stats
+                if (heatmapStats && hasActivity) {
+                    heatmapStats.innerHTML = `
+                        <span>Current Streak: <strong style="color: var(--text-light);">${streak.current_streak} days</strong></span>
+                        <span>Longest Streak: <strong style="color: var(--text-light);">${streak.longest_streak} days</strong></span>
+                        <span>Active Days: <strong style="color: var(--text-light);">${activeDays}</strong></span>
+                    `;
+                }
 
-                    let startDate, endDate;
-                    if (targetYear === currentYear) {
-                        endDate = new Date();
-                        startDate = new Date();
-                        startDate.setDate(endDate.getDate() - 370);
-                    } else {
-                        startDate = new Date(targetYear, 0, 1);
-                        endDate = new Date(targetYear, 11, 31);
+                if (!hasActivity) return; // Don't render grid
+
+                // Calendar geometry: Jan 1 to Dec 31 of current year
+                const jan1 = new Date(currentYear, 0, 1);
+                const dec31 = new Date(currentYear, 11, 31);
+                const startOffset = jan1.getDay(); // 0=Sun
+                const totalCalendarDays = startOffset + Math.ceil((dec31 - jan1) / (1000 * 60 * 60 * 24)) + 1;
+                const totalWeeks = Math.ceil(totalCalendarDays / 7);
+
+                // Month labels
+                if (heatmapMonths) {
+                    heatmapMonths.innerHTML = '';
+                    const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                    const monthWeekStarts = [];
+                    for (let m = 0; m < 12; m++) {
+                        const firstOfMonth = new Date(currentYear, m, 1);
+                        const dayOfYear = Math.floor((firstOfMonth - jan1) / (1000 * 60 * 60 * 24));
+                        const weekIndex = Math.floor((dayOfYear + startOffset) / 7);
+                        monthWeekStarts.push(weekIndex);
                     }
+                    for (let m = 0; m < 12; m++) {
+                        const span = document.createElement('span');
+                        span.textContent = monthNames[m];
+                        const nextWeek = m < 11 ? monthWeekStarts[m + 1] : totalWeeks;
+                        const colSpan = nextWeek - monthWeekStarts[m];
+                        span.style.cssText = `flex: ${colSpan}; min-width: 0;`;
+                        heatmapMonths.appendChild(span);
+                    }
+                }
 
-                    const startDay = startDate.getDay();
-                    startDate.setDate(startDate.getDate() - startDay);
-                    
-                    const totalDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + (7 - endDate.getDay());
-                    const tempDate = new Date(startDate);
-                    
-                    let totalMinutesSpent = 0;
-                    let lastMonth = -1;
+                // Day labels (7 rows: Sun-Sat, show Mon/Wed/Fri)
+                if (heatmapDayLabels) {
+                    heatmapDayLabels.innerHTML = '';
+                    const dayNames = ['', 'Mon', '', 'Wed', '', 'Fri', ''];
+                    dayNames.forEach(name => {
+                        const label = document.createElement('span');
+                        label.textContent = name;
+                        label.style.cssText = `height: 12px; line-height: 12px; font-size: 0.65rem; color: var(--text-slate-400); margin-bottom: 3px;`;
+                        heatmapDayLabels.appendChild(label);
+                    });
+                }
 
-                    for (let i = 0; i < totalDays; i++) {
-                        const dateStr = tempDate.toISOString().slice(0, 10);
-                        const count = map[dateStr] || 0;
-                        
-                        if (count > 0 && targetYear === currentYear) {
-                            totalMinutesSpent += count * 25;
-                        }
-                        
-                        // Month Labels
-                        if (tempDate.getDate() === 1 || (i === 0 && tempDate.getDate() < 15)) {
-                            if (tempDate.getMonth() !== lastMonth) {
-                                lastMonth = tempDate.getMonth();
-                                if (monthsEl) {
-                                    const monthSpan = document.createElement('span');
-                                    monthSpan.textContent = tempDate.toLocaleDateString(undefined, { month: 'short' });
-                                    monthSpan.style.position = 'absolute';
-                                    monthSpan.style.left = `calc(${(i / 7) / 53 * 100}% + 2px)`;
-                                    monthsEl.appendChild(monthSpan);
+                // Grid setup
+                heatmapGrid.style.gridTemplateColumns = `repeat(${totalWeeks}, 12px)`;
+                heatmapGrid.style.gridTemplateRows = 'repeat(7, 12px)';
+                heatmapGrid.style.gap = '3px';
+                heatmapGrid.style.gridAutoFlow = 'column';
+                heatmapGrid.style.justifyContent = 'space-between';
+                heatmapGrid.innerHTML = '';
+
+                const colorScale = ['#161b22', '#0f3d3a', '#136f63', '#1ca58f', '#2dd4bf'];
+                const typeLabels = {
+                    save_project: 'Saved Algorithm',
+                    run_visualizer: 'Ran Visualizer',
+                    share_project: 'Shared Project',
+                    upvote_project: 'Upvoted Project',
+                    bootstrap_generated: 'Practice Session'
+                };
+
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                // Build DocumentFragment for performance
+                const fragment = document.createDocumentFragment();
+
+                for (let week = 0; week < totalWeeks; week++) {
+                    for (let dow = 0; dow < 7; dow++) {
+                        const dayIndex = week * 7 + dow - startOffset;
+                        const cell = document.createElement('div');
+                        cell.style.width = '12px';
+                        cell.style.height = '12px';
+                        cell.style.borderRadius = '2px';
+
+                        if (dayIndex < 0 || dayIndex > 365) {
+                            // Out-of-year padding
+                            cell.style.background = 'transparent';
+                        } else {
+                            const cellDate = new Date(currentYear, 0, 1 + dayIndex);
+                            const dateStr = `${currentYear}-${String(cellDate.getMonth() + 1).padStart(2, '0')}-${String(cellDate.getDate()).padStart(2, '0')}`;
+
+                            // Future dates
+                            if (cellDate > today) {
+                                cell.style.background = 'transparent';
+                            } else {
+                                const entry = activityMap[dateStr];
+                                const score = entry ? entry.score : 0;
+
+                                let level;
+                                if (score === 0) level = 0;
+                                else if (score <= 2) level = 1;
+                                else if (score <= 5) level = 2;
+                                else if (score <= 10) level = 3;
+                                else level = 4;
+
+                                cell.style.background = colorScale[level];
+                                cell.style.cursor = 'default';
+
+                                // Store data for tooltip
+                                cell.dataset.date = dateStr;
+                                cell.dataset.score = score;
+                                if (entry) {
+                                    cell.dataset.types = JSON.stringify(entry.types);
                                 }
                             }
                         }
-                        
-                        const cell = document.createElement('div');
-                        cell.style.borderRadius = '2px';
-                        cell.style.width = '100%';
-                        cell.style.height = '100%';
-                        
-                        // If it's a past year, and date exceeds end of that year, leave blank or transparent
-                        if (targetYear !== currentYear && tempDate > endDate) {
-                            cell.style.visibility = 'hidden';
-                        } else {
-                            if (count === 0) {
-                                cell.style.background = 'rgba(255,255,255,0.03)';
-                            } else if (count === 1) {
-                                cell.style.background = '#0e4429';
-                            } else if (count <= 3) {
-                                cell.style.background = '#006d32';
-                            } else if (count <= 6) {
-                                cell.style.background = '#26a641';
-                            } else {
-                                cell.style.background = '#39d353';
-                            }
-                            
-                            const formattedDate = tempDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-                            
-                            let timeSpentText = "No time spent";
-                            if (count > 0) {
-                                let cellMins = count * 25;
-                                let h = Math.floor(cellMins / 60);
-                                let m = cellMins % 60;
-                                if (h > 0) timeSpentText = `${h}h ${m}m spent`;
-                                else timeSpentText = `${m}m spent`;
-                            }
-                            cell.title = `${timeSpentText} on ${formattedDate}`;
-                        }
-                        
-                        calendarEl.appendChild(cell);
-                        tempDate.setDate(tempDate.getDate() + 1);
-                    }
-                    
-                    // Update header text
-                    const headerText = document.getElementById('contribution-header-text');
-                    if (headerText) {
-                        let totalHours = Math.floor(totalMinutesSpent / 60);
-                        headerText.textContent = `${totalHours} hours spent in the last year`;
+
+                        fragment.appendChild(cell);
                     }
                 }
 
-                // Initial render
-                renderCalendarForYear(currentYear, contributionsMap);
+                heatmapGrid.appendChild(fragment);
+
+                // Tooltip handlers (event delegation)
+                heatmapGrid.addEventListener('mouseenter', (e) => {
+                    if (e.target.dataset.date && heatmapTooltip) {
+                        const dateStr = e.target.dataset.date;
+                        const score = parseInt(e.target.dataset.score);
+                        const d = new Date(dateStr + 'T00:00:00');
+                        const formattedDate = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+
+                        let html = `<div style="font-weight: 600; margin-bottom: 3px;">${formattedDate}</div>`;
+
+                        if (score === 0) {
+                            html += `<div style="color: #8b949e;">No activity</div>`;
+                        } else {
+                            const types = JSON.parse(e.target.dataset.types || '{}');
+                            const totalActivities = Object.values(types).reduce((a, b) => a + b, 0);
+                            html += `<div style="color: #2dd4bf; margin-bottom: 4px;">${totalActivities} ${totalActivities === 1 ? 'activity' : 'activities'}</div>`;
+                            Object.entries(types).forEach(([type, count]) => {
+                                const label = typeLabels[type] || type;
+                                html += `<div style="color: #8b949e;">• ${label}${count > 1 ? ' ×' + count : ''}</div>`;
+                            });
+                        }
+
+                        heatmapTooltip.innerHTML = html;
+                        heatmapTooltip.style.display = 'block';
+
+                        const rect = e.target.getBoundingClientRect();
+                        heatmapTooltip.style.left = (rect.left + rect.width / 2 - heatmapTooltip.offsetWidth / 2) + 'px';
+                        heatmapTooltip.style.top = (rect.top - heatmapTooltip.offsetHeight - 8) + 'px';
+                    }
+                }, true);
+
+                heatmapGrid.addEventListener('mouseleave', (e) => {
+                    if (e.target.dataset.date && heatmapTooltip) {
+                        heatmapTooltip.style.display = 'none';
+                    }
+                }, true);
             }
         } catch (e) {
             console.warn('Failed to load developer stats:', e);

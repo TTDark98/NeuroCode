@@ -114,7 +114,20 @@ pool.query('SELECT 1')
                 console.log('✔ Default badges seeded successfully.');
             }
 
+            // Expand activity_type ENUM to include bootstrap_generated
+            try {
+                await pool.query(`
+                    ALTER TABLE user_activity_log 
+                    MODIFY COLUMN activity_type ENUM('save_project', 'run_visualizer', 'share_project', 'upvote_project', 'bootstrap_generated') NOT NULL
+                `);
+            } catch (e) {
+                // Ignore if already modified or column doesn't exist yet
+            }
+
             console.log('✔ Database schema verified/updated.');
+
+            // Bootstrap activity log for development
+            await bootstrapActivityLog();
         } catch (e) {
             console.error('✘ Failed to run schema migrations:', e.message);
         }
@@ -123,6 +136,195 @@ pool.query('SELECT 1')
         console.error('✘ Failed to connect to MariaDB database:', err);
         process.exit(1);
     });
+
+/**
+ * Bootstrap Activity Log
+ * Generates realistic activity history from existing project data.
+ * Runs ONLY when user_activity_log is completely empty.
+ * Records are marked with activity_type = 'bootstrap_generated'.
+ */
+async function bootstrapActivityLog() {
+    try {
+        // 1. Check if activity log already has records
+        const [countResult] = await pool.query('SELECT COUNT(*) as count FROM user_activity_log');
+        if (countResult[0].count > 0) {
+            return; // Real or bootstrap data exists — never regenerate
+        }
+
+        // 2. Check if there's a user to bootstrap for
+        const [users] = await pool.query('SELECT id, created_at, visualizer_runs FROM users ORDER BY id ASC LIMIT 1');
+        if (users.length === 0) {
+            return; // No users yet
+        }
+        const userId = users[0].id;
+        const userCreatedAt = new Date(users[0].created_at);
+        const visualizerRuns = users[0].visualizer_runs || 0;
+
+        // 3. Fetch all projects for this user
+        const [projects] = await pool.query(
+            'SELECT id, name, created_at, updated_at FROM projects WHERE user_id = ? ORDER BY created_at ASC',
+            [userId]
+        );
+
+        if (projects.length === 0) {
+            return; // No projects to derive activity from
+        }
+
+        console.log(`⏳ Bootstrapping activity log for user ${userId} from ${projects.length} projects...`);
+
+        const activityRows = []; // [user_id, activity_type, activity_date]
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // Helper: format date as YYYY-MM-DD
+        function fmt(d) {
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+
+        // Helper: random int between min and max (inclusive)
+        function randInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        // Helper: random date between two dates
+        function randomDateBetween(start, end) {
+            const s = start.getTime();
+            const e = end.getTime();
+            if (e <= s) return new Date(s);
+            return new Date(s + Math.random() * (e - s));
+        }
+
+        // Track which dates have activity to compute realistic streaks
+        const activeDates = new Set();
+
+        // 4. Generate activity from each project
+        for (const project of projects) {
+            const createdAt = new Date(project.created_at);
+            const updatedAt = new Date(project.updated_at);
+
+            // a) save_project on creation date
+            const createDate = fmt(createdAt);
+            activityRows.push([userId, 'save_project', createDate]);
+            activeDates.add(createDate);
+
+            // b) save_project on update date (if different from creation)
+            const updateDate = fmt(updatedAt);
+            if (updateDate !== createDate) {
+                activityRows.push([userId, 'save_project', updateDate]);
+                activeDates.add(updateDate);
+            }
+
+            // c) run_visualizer events around creation (likely tested after saving)
+            const vizCount = randInt(1, 3);
+            for (let v = 0; v < vizCount; v++) {
+                const vizDate = new Date(createdAt);
+                vizDate.setDate(vizDate.getDate() + randInt(0, 2));
+                if (vizDate <= today) {
+                    const d = fmt(vizDate);
+                    activityRows.push([userId, 'run_visualizer', d]);
+                    activeDates.add(d);
+                }
+            }
+
+            // d) Distribute additional activity events between creation and last modification
+            const diffDays = Math.ceil((updatedAt - createdAt) / (1000 * 60 * 60 * 24));
+            if (diffDays > 3) {
+                // Number of extra activity days based on project age span
+                const extraDays = Math.min(randInt(2, Math.ceil(diffDays / 5)), 15);
+                for (let e = 0; e < extraDays; e++) {
+                    const randDate = randomDateBetween(createdAt, updatedAt);
+                    if (randDate <= today) {
+                        const d = fmt(randDate);
+                        // Weighted: 60% low (1-2 events), 30% medium (3-5), 10% high (6-10)
+                        const roll = Math.random();
+                        let eventCount;
+                        if (roll < 0.6) eventCount = randInt(1, 2);
+                        else if (roll < 0.9) eventCount = randInt(3, 5);
+                        else eventCount = randInt(6, 10);
+
+                        for (let ev = 0; ev < eventCount; ev++) {
+                            const actTypes = ['save_project', 'run_visualizer', 'save_project', 'run_visualizer', 'share_project'];
+                            const aType = actTypes[randInt(0, actTypes.length - 1)];
+                            activityRows.push([userId, aType, d]);
+                        }
+                        activeDates.add(d);
+                    }
+                }
+            }
+        }
+
+        // 5. Add visualizer run events spread across the user's lifetime
+        if (visualizerRuns > 0) {
+            const vizStartDate = userCreatedAt > new Date(today.getFullYear(), 0, 1) ? userCreatedAt : new Date(today.getFullYear(), 0, 1);
+            const spreadRuns = Math.min(visualizerRuns, 30); // Cap at 30 extra spread events
+            for (let r = 0; r < spreadRuns; r++) {
+                const rd = randomDateBetween(vizStartDate, today);
+                if (rd <= today) {
+                    const d = fmt(rd);
+                    activityRows.push([userId, 'run_visualizer', d]);
+                    activeDates.add(d);
+                }
+            }
+        }
+
+        // 6. Mark all rows as bootstrap_generated and insert
+        // Replace actual types with bootstrap_generated so they're identifiable
+        const bootstrapRows = activityRows.map(([uid, , date]) => [uid, 'bootstrap_generated', date]);
+
+        if (bootstrapRows.length === 0) {
+            return;
+        }
+
+        // Batch insert for performance
+        const placeholders = bootstrapRows.map(() => '(?, ?, ?)').join(', ');
+        const flatValues = bootstrapRows.flat();
+        await pool.query(
+            `INSERT INTO user_activity_log (user_id, activity_type, activity_date) VALUES ${placeholders}`,
+            flatValues
+        );
+
+        // 7. Compute and set streak data from bootstrapped dates
+        const sortedDates = Array.from(activeDates).sort();
+        if (sortedDates.length > 0) {
+            let currentStreak = 1;
+            let longestStreak = 1;
+            let tempStreak = 1;
+
+            for (let i = 1; i < sortedDates.length; i++) {
+                const prev = new Date(sortedDates[i - 1]);
+                const curr = new Date(sortedDates[i]);
+                const diff = Math.round((curr - prev) / (1000 * 60 * 60 * 24));
+                if (diff === 1) {
+                    tempStreak++;
+                    longestStreak = Math.max(longestStreak, tempStreak);
+                } else if (diff > 1) {
+                    tempStreak = 1;
+                }
+            }
+
+            // Check if streak reaches today
+            const lastDate = new Date(sortedDates[sortedDates.length - 1]);
+            const todayStr = fmt(today);
+            const yesterdayStr = fmt(new Date(today.getTime() - 86400000));
+            if (sortedDates[sortedDates.length - 1] === todayStr || sortedDates[sortedDates.length - 1] === yesterdayStr) {
+                currentStreak = tempStreak;
+            } else {
+                currentStreak = 0;
+            }
+
+            await pool.query(
+                `INSERT INTO user_streaks (user_id, current_streak, longest_streak, last_activity_date) 
+                 VALUES (?, ?, ?, ?) 
+                 ON DUPLICATE KEY UPDATE current_streak = VALUES(current_streak), longest_streak = VALUES(longest_streak), last_activity_date = VALUES(last_activity_date)`,
+                [userId, currentStreak, longestStreak, sortedDates[sortedDates.length - 1]]
+            );
+        }
+
+        console.log(`✔ Bootstrapped ${bootstrapRows.length} activity records across ${activeDates.size} days for user ${userId}.`);
+    } catch (err) {
+        console.error('✘ Bootstrap activity log error:', err.message);
+    }
+}
 
 // ═══════════════════════════════════════
 // AUTHENTICATION MIDDLEWARE
@@ -475,14 +677,29 @@ async function logUserActivity(userId, activityType) {
 // API ROUTES: GAMIFICATION & ACTIVITIES
 // ═══════════════════════════════════════
 
-// Get user contributions for the calendar
+// Get user contributions for the heatmap calendar
 app.get('/api/users/contributions', authMiddleware, async (req, res) => {
     try {
+        const currentYear = new Date().getFullYear();
         const [rows] = await pool.query(
-            'SELECT activity_date, COUNT(*) as count FROM user_activity_log WHERE user_id = ? GROUP BY activity_date ORDER BY activity_date ASC',
-            [req.user.id]
+            `SELECT activity_date, activity_type, COUNT(*) as count 
+             FROM user_activity_log 
+             WHERE user_id = ? AND YEAR(activity_date) = ?
+             GROUP BY activity_date, activity_type 
+             ORDER BY activity_date ASC`,
+            [req.user.id, currentYear]
         );
-        res.json(rows);
+        // Also count total distinct active days for the year
+        const [activeDaysResult] = await pool.query(
+            `SELECT COUNT(DISTINCT activity_date) as active_days 
+             FROM user_activity_log 
+             WHERE user_id = ? AND YEAR(activity_date) = ?`,
+            [req.user.id, currentYear]
+        );
+        res.json({
+            activities: rows,
+            active_days: activeDaysResult[0]?.active_days || 0
+        });
     } catch (err) {
         console.error('Contributions API Error:', err);
         res.status(500).json({ error: 'Failed to fetch contributions.' });

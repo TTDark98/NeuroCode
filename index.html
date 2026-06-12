@@ -4,7 +4,12 @@
 <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>NeuroCode | Algorithm Visualization Platform</title>
+    <title>NeuroCode</title>
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg?v=1" />
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png?v=1" />
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png?v=1" />
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/favicon.png?v=1" />
+    <link rel="shortcut icon" href="assets/favicon.ico?v=1" />
     <meta name="description"
         content="NeuroCode — Interactive algorithm visualization platform. Visualize sorting, searching, and graph algorithms step by step with smooth animations." />
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap"
@@ -15,7 +20,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
         rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="css/styles.css" />
 </head>
 
 <body class="app-body">
@@ -999,62 +1004,47 @@
                         </div>
                     </div>
 
-                    <!-- GitHub-Style Contribution Calendar -->
-                    <div style="margin-top: 2rem;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                            <h4 id="contribution-header-text" style="margin: 0; font-size: 1rem; font-weight: normal; color: var(--text-light);">
-                                0 hours spent in the last year
+                    <!-- Practice Streak Heatmap -->
+                    <div id="practice-streak-section" style="margin-top: 2rem;">
+                        <!-- Header -->
+                        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.75rem;">
+                            <h4 style="margin: 0; font-size: 1rem; font-weight: 600; color: var(--text-light);">
+                                Practice Streak — <span id="heatmap-year"></span>
                             </h4>
-                            <div style="font-size: 0.85rem; color: var(--text-slate-400); cursor: pointer;">Contribution settings ▼</div>
+                            <div id="heatmap-stats" style="display: flex; gap: 1.5rem; font-size: 0.8rem; color: var(--text-slate-400);"></div>
                         </div>
 
-                        <div style="display: flex; gap: 1.5rem; align-items: flex-start;">
-                            <!-- Graph Container -->
-                            <div class="glass-card" style="padding: 1rem; flex: 1; border: 1px solid var(--border-color); overflow-x: auto;">
-                                <div style="display: flex;">
-                                    <!-- Day Labels -->
-                                    <div style="display: flex; flex-direction: column; justify-content: space-between; font-size: 0.75rem; color: var(--text-slate-400); width: 35px; height: 150px; padding-top: 5px; padding-bottom: 5px; margin-top: 20px;">
-                                        <span style="visibility: hidden;">Sun</span>
-                                        <span>Mon</span>
-                                        <span style="visibility: hidden;">Tue</span>
-                                        <span>Wed</span>
-                                        <span style="visibility: hidden;">Thu</span>
-                                        <span>Fri</span>
-                                        <span style="visibility: hidden;">Sat</span>
-                                    </div>
-                                    
-                                    <!-- Months and Grid -->
-                                    <div style="flex: 1; display: flex; flex-direction: column;">
-                                        <!-- Month Labels -->
-                                        <div id="contribution-months" style="display: flex; font-size: 0.75rem; color: var(--text-slate-400); margin-bottom: 5px; position: relative; height: 15px;">
-                                            <!-- Filled dynamically -->
-                                        </div>
-                                        
-                                        <!-- The Grid itself -->
-                                        <div id="contribution-calendar" style="display: grid; grid-template-columns: repeat(53, 1fr); grid-template-rows: repeat(7, 1fr); gap: 4px; width: 100%; height: 150px;">
-                                            <!-- Dynamically populated cells by main.js -->
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: var(--text-slate-400); margin-top: 1rem; margin-left: 35px;">
-                                    <a href="#" style="color: var(--text-slate-400); text-decoration: none;">Learn how we count time spent</a>
-                                    <div style="display: flex; gap: 4px; align-items: center;">
-                                        <span>Less</span>
-                                        <span style="width: 10px; height: 10px; border-radius: 2px; background: rgba(255,255,255,0.05);"></span>
-                                        <span style="width: 10px; height: 10px; border-radius: 2px; background: #0e4429;"></span>
-                                        <span style="width: 10px; height: 10px; border-radius: 2px; background: #006d32;"></span>
-                                        <span style="width: 10px; height: 10px; border-radius: 2px; background: #26a641;"></span>
-                                        <span style="width: 10px; height: 10px; border-radius: 2px; background: #39d353;"></span>
-                                        <span>More</span>
-                                    </div>
-                                </div>
+                        <!-- Heatmap Container -->
+                        <div id="heatmap-container" style="padding: 1rem 1rem 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; background: var(--card-bg);">
+                            <!-- Month labels -->
+                            <div style="display: flex; padding-left: 32px;">
+                                <div id="heatmap-months" style="display: flex; width: 100%; font-size: 0.7rem; color: var(--text-slate-400); margin-bottom: 6px;"></div>
                             </div>
-                            
-                            <!-- Year Selector List -->
-                            <div id="year-selector-list" style="width: 80px; display: flex; flex-direction: column; gap: 0.25rem;">
-                                <!-- Filled by main.js -->
+                            <!-- Day labels + Grid -->
+                            <div style="display: flex; gap: 4px;">
+                                <div id="heatmap-day-labels" style="display: flex; flex-direction: column; width: 28px; flex-shrink: 0;"></div>
+                                <div id="heatmap-grid" style="display: grid; flex: 1;"></div>
                             </div>
+                            <!-- Legend -->
+                            <div style="display: flex; justify-content: flex-end; align-items: center; gap: 4px; font-size: 0.7rem; color: var(--text-slate-400); margin-top: 10px; padding-right: 2px;">
+                                <span>Less</span>
+                                <span style="width: 12px; height: 12px; border-radius: 2px; background: #161b22;"></span>
+                                <span style="width: 12px; height: 12px; border-radius: 2px; background: #0f3d3a;"></span>
+                                <span style="width: 12px; height: 12px; border-radius: 2px; background: #136f63;"></span>
+                                <span style="width: 12px; height: 12px; border-radius: 2px; background: #1ca58f;"></span>
+                                <span style="width: 12px; height: 12px; border-radius: 2px; background: #2dd4bf;"></span>
+                                <span>More</span>
+                            </div>
+                        </div>
+
+                        <!-- Tooltip -->
+                        <div id="heatmap-tooltip" style="display: none; position: fixed; z-index: 1000; pointer-events: none; background: #1b1f23; border: 1px solid #30363d; border-radius: 4px; padding: 8px 10px; font-size: 0.75rem; color: #e6edf3; max-width: 220px; box-shadow: 0 2px 8px rgba(0,0,0,0.4);"></div>
+
+                        <!-- Empty state (hidden by default) -->
+                        <div id="heatmap-empty" style="display: none; text-align: center; padding: 2.5rem 1.5rem; border: 1px solid var(--border-color); border-radius: 6px; background: var(--card-bg);">
+                            <h4 style="margin: 0 0 0.5rem; font-size: 1rem; font-weight: 600; color: var(--text-light);">Practice Streak</h4>
+                            <p style="margin: 0 0 1.25rem; font-size: 0.85rem; color: var(--text-slate-400);">No activity recorded yet.<br>Start building an algorithm to begin your streak.</p>
+                            <button class="btn-primary" onclick="document.getElementById('btn-open-studio')?.click()" style="padding: 0.5rem 1.25rem; font-size: 0.85rem;">New Algorithm</button>
                         </div>
                     </div>
                 </div>
