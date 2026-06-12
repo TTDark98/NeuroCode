@@ -3248,3 +3248,55 @@ html.dark .architect-panel-right {
         font-size: 0.5rem !important;
     }
 }
+
+/* ======================================
+   Practice Streak Heatmap Themes
+   ====================================== */
+:root {
+  /* Default fallback */
+  --heatmap-0: #161b22;
+  --heatmap-1: #0f3d3a;
+  --heatmap-2: #136f63;
+  --heatmap-3: #1ca58f;
+  --heatmap-4: #2dd4bf;
+}
+
+body[data-theme="dark-futuristic"] {
+  --heatmap-0: #161b22;
+  --heatmap-1: #0f3d3a;
+  --heatmap-2: #136f63;
+  --heatmap-3: #1ca58f;
+  --heatmap-4: #2dd4bf;
+}
+
+body[data-theme="light-minimalist"] {
+  --heatmap-0: #e5e7eb;
+  --heatmap-1: #c7d2fe;
+  --heatmap-2: #93c5fd;
+  --heatmap-3: #60a5fa;
+  --heatmap-4: #2563eb;
+}
+
+body[data-theme="solarized-hacker"] {
+  --heatmap-0: #073642;
+  --heatmap-1: rgba(133, 153, 0, 0.3);
+  --heatmap-2: rgba(133, 153, 0, 0.5);
+  --heatmap-3: rgba(133, 153, 0, 0.8);
+  --heatmap-4: #859900;
+}
+
+body[data-theme="retro-pixel"] {
+  --heatmap-0: #1a1a1a;
+  --heatmap-1: #388e3c;
+  --heatmap-2: #4caf50;
+  --heatmap-3: #8bc34a;
+  --heatmap-4: #cddc39;
+}
+
+body[data-theme="neuro-blush"] {
+  --heatmap-0: rgba(251, 182, 213, 0.3);
+  --heatmap-1: #fbcfe8;
+  --heatmap-2: #f472b6;
+  --heatmap-3: #ec4899;
+  --heatmap-4: #be185d;
+}

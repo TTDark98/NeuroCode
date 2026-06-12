@@ -628,6 +628,21 @@ async function checkAndUnlockBadges(userId) {
     }
 }
 
+function isActiveDay(dayData) {
+    let dailyScore = 0;
+    if (dayData && dayData.activities) {
+        for (const type of dayData.activities) {
+            if (type === 'create_project') dailyScore += 10;
+            else if (type === 'save_project') dailyScore += 5;
+            else if (type === 'modify_project') dailyScore += 5;
+            else if (type === 'run_visualizer') dailyScore += 1;
+            else if (type === 'bootstrap_generated') dailyScore += 5; // Support existing bootstrapped data
+        }
+    }
+    console.log(`[Streak Debug] daily score: ${dailyScore}, active status: ${dailyScore >= 5}`);
+    return dailyScore >= 5;
+}
+
 async function logUserActivity(userId, activityType) {
     const today = new Date().toISOString().slice(0, 10);
     try {
@@ -637,32 +652,48 @@ async function logUserActivity(userId, activityType) {
             [userId, activityType, today]
         );
 
-        // 2. Update Daily Streak
-        const [streakRow] = await pool.query('SELECT current_streak, longest_streak, last_activity_date FROM user_streaks WHERE user_id = ?', [userId]);
-        if (streakRow.length === 0) {
-            await pool.query(
-                'INSERT INTO user_streaks (user_id, current_streak, longest_streak, last_activity_date) VALUES (?, 1, 1, ?)',
-                [userId, today]
-            );
-        } else {
-            const streak = streakRow[0];
-            const lastDate = new Date(streak.last_activity_date);
-            const currentDate = new Date(today);
-            const diffTime = Math.abs(currentDate - lastDate);
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        // Fetch today's activities to check if it's an active day
+        const [todayActivities] = await pool.query(
+            'SELECT activity_type FROM user_activity_log WHERE user_id = ? AND activity_date = ?',
+            [userId, today]
+        );
 
-            if (diffDays === 1) {
-                const newStreak = streak.current_streak + 1;
-                const newLongest = Math.max(streak.longest_streak, newStreak);
+        const activitiesList = todayActivities.map(row => row.activity_type);
+        const dayData = { activities: activitiesList };
+
+        console.log(`[Streak Debug] Checking streak calculations for user ${userId} on ${today}`);
+        const isActive = isActiveDay(dayData);
+
+        // 2. Update Daily Streak
+        if (isActive) {
+            const [streakRow] = await pool.query('SELECT current_streak, longest_streak, last_activity_date FROM user_streaks WHERE user_id = ?', [userId]);
+            if (streakRow.length === 0) {
                 await pool.query(
-                    'UPDATE user_streaks SET current_streak = ?, longest_streak = ?, last_activity_date = ? WHERE user_id = ?',
-                    [newStreak, newLongest, today, userId]
+                    'INSERT INTO user_streaks (user_id, current_streak, longest_streak, last_activity_date) VALUES (?, 1, 1, ?)',
+                    [userId, today]
                 );
-            } else if (diffDays > 1) {
-                await pool.query(
-                    'UPDATE user_streaks SET current_streak = 1, last_activity_date = ? WHERE user_id = ?',
-                    [today, userId]
-                );
+            } else {
+                const streak = streakRow[0];
+                // Ensure date parsing doesn't shift due to timezone
+                const lastDateStr = new Date(streak.last_activity_date).toISOString().slice(0, 10);
+                const lastDate = new Date(lastDateStr);
+                const currentDate = new Date(today);
+                const diffTime = Math.abs(currentDate - lastDate);
+                const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+                if (diffDays === 1) {
+                    const newStreak = streak.current_streak + 1;
+                    const newLongest = Math.max(streak.longest_streak, newStreak);
+                    await pool.query(
+                        'UPDATE user_streaks SET current_streak = ?, longest_streak = ?, last_activity_date = ? WHERE user_id = ?',
+                        [newStreak, newLongest, today, userId]
+                    );
+                } else if (diffDays > 1) {
+                    await pool.query(
+                        'UPDATE user_streaks SET current_streak = 1, last_activity_date = ? WHERE user_id = ?',
+                        [today, userId]
+                    );
+                }
             }
         }
 
@@ -689,16 +720,27 @@ app.get('/api/users/contributions', authMiddleware, async (req, res) => {
              ORDER BY activity_date ASC`,
             [req.user.id, currentYear]
         );
-        // Also count total distinct active days for the year
-        const [activeDaysResult] = await pool.query(
-            `SELECT COUNT(DISTINCT activity_date) as active_days 
-             FROM user_activity_log 
-             WHERE user_id = ? AND YEAR(activity_date) = ?`,
-            [req.user.id, currentYear]
-        );
+        // Group by date to calculate active days correctly based on score
+        const daysMap = {};
+        rows.forEach(row => {
+            const dateStr = new Date(row.activity_date).toISOString().slice(0, 10);
+            if (!daysMap[dateStr]) daysMap[dateStr] = [];
+            for (let i = 0; i < row.count; i++) {
+                daysMap[dateStr].push(row.activity_type);
+            }
+        });
+
+        let activeDaysCount = 0;
+        for (const dateStr in daysMap) {
+            const dayData = { activities: daysMap[dateStr] };
+            if (isActiveDay(dayData)) {
+                activeDaysCount++;
+            }
+        }
+
         res.json({
             activities: rows,
-            active_days: activeDaysResult[0]?.active_days || 0
+            active_days: activeDaysCount
         });
     } catch (err) {
         console.error('Contributions API Error:', err);
@@ -737,7 +779,23 @@ app.get('/api/users/streak', authMiddleware, async (req, res) => {
         if (rows.length === 0) {
             return res.json({ current_streak: 0, longest_streak: 0, last_activity_date: null });
         }
-        res.json(rows[0]);
+        
+        const streak = rows[0];
+        if (streak.last_activity_date) {
+            const lastDateStr = new Date(streak.last_activity_date).toISOString().slice(0, 10);
+            const lastDate = new Date(lastDateStr);
+            const todayStr = new Date().toISOString().slice(0, 10);
+            const today = new Date(todayStr);
+            const diffTime = Math.abs(today - lastDate);
+            const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+            
+            // If the last active day was more than 1 day ago, the current streak is broken
+            if (diffDays > 1) {
+                streak.current_streak = 0;
+            }
+        }
+        
+        res.json(streak);
     } catch (err) {
         console.error('Streak API Error:', err);
         res.status(500).json({ error: 'Failed to fetch streak.' });

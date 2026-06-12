@@ -224,6 +224,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 html.style.setProperty('--surface-dark-rgb', '22, 37, 37');
                 html.style.setProperty('--border-dark-rgb', '40, 57, 57');
         }
+
+        // Dynamic Favicon Update
+        const primaryRgb = html.style.getPropertyValue('--primary-rgb').trim();
+        const bgRgb = html.style.getPropertyValue('--bg-dark-rgb').trim();
+        
+        const primaryColor = primaryRgb ? `rgb(${primaryRgb})` : '#25f4f4';
+        const bgColor = bgRgb ? `rgb(${bgRgb})` : '#0a1111';
+
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512"><rect width="512" height="512" rx="64" ry="64" fill="${primaryColor}" /><svg x="64" y="64" width="384" height="384" viewBox="0 -960 960 960"><path fill="${bgColor}" d="M600-80v-100L320-320H120v-240h172l108-124v-196h240v240H468L360-516v126l240 120v-50h240v240H600ZM480-720h80v-80h-80v80ZM200-400h80v-80h-80v80Zm480 240h80v-80h-80v80ZM520-760ZM240-440Zm480 240Z"/></svg></svg>`;
+
+        const encodedSvg = encodeURIComponent(svg);
+        const dataUrl = `data:image/svg+xml;charset=utf-8,${encodedSvg}`;
+
+        const links = document.querySelectorAll("link[rel~='icon']");
+        links.forEach(link => {
+            link.type = 'image/svg+xml';
+            link.href = dataUrl;
+            link.removeAttribute('sizes');
+        });
     }
 
     if (themeSelector) {
@@ -1635,7 +1654,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 heatmapGrid.style.justifyContent = 'space-between';
                 heatmapGrid.innerHTML = '';
 
-                const colorScale = ['#161b22', '#0f3d3a', '#136f63', '#1ca58f', '#2dd4bf'];
                 const typeLabels = {
                     save_project: 'Saved Algorithm',
                     run_visualizer: 'Ran Visualizer',
@@ -1679,7 +1697,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 else if (score <= 10) level = 3;
                                 else level = 4;
 
-                                cell.style.background = colorScale[level];
+                                cell.style.backgroundColor = `var(--heatmap-${level})`;
                                 cell.style.cursor = 'default';
 
                                 // Store data for tooltip
