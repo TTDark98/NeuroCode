@@ -609,7 +609,7 @@ Format your responses cleanly using standard markdown. Keep them under 3 brief p
 
     // ─── Generate Code from Prompt ─────────────────
     async function generateCodeFromPrompt(promptStr) {
-        const systemPrompt = `You are NeuroCode Architect, an AI assistant that writes clean, self-contained algorithms in C++ or Javascript.
+        const systemPrompt = `You are NeuroCode Builder, an AI assistant that writes clean, self-contained algorithms in C++ or Javascript.
 Given a request from the user, write the complete, clean algorithm code.
 Follow these guidelines:
 1. Output ONLY the code itself.
@@ -626,7 +626,7 @@ Follow these guidelines:
 
     // ─── Generate Pseudocode from Code ─────────────
     async function generatePseudocodeFromCode(codeStr) {
-        const systemPrompt = `You are NeuroCode Architect, an AI assistant that analyzes code and explains algorithms.
+        const systemPrompt = `You are NeuroCode Builder, an AI assistant that analyzes code and explains algorithms.
 Given raw source code (e.g. C++ or Javascript), explain the algorithm step-by-step and write clean, readable pseudocode.
 Follow these guidelines:
 1. Output ONLY the description and the pseudocode.
