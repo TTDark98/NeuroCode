@@ -60,6 +60,13 @@
                             <span class="material-symbols-outlined">notifications</span>
                         </button>
                     </div>
+                    <!-- Streak Flame Badge -->
+                    <div id="header-streak-container" style="display: flex; align-items: center; margin-right: 0.5rem;">
+                        <div class="streak-header-badge" id="header-streak-badge" style="display: none; align-items: center; gap: 0.15rem; background: rgba(249, 115, 22, 0.1); border: 1px solid rgba(249, 115, 22, 0.25); color: #f97316; padding: 0.25rem 0.5rem; border-radius: 1rem; font-size: 0.75rem; font-weight: 700; cursor: pointer;" title="Daily Active Streak! Click to view profile.">
+                            <span class="material-symbols-outlined" style="font-size: 0.95rem; font-weight: bold; vertical-align: middle;">local_fire_department</span>
+                            <span id="header-streak-count" style="vertical-align: middle;">0</span>
+                        </div>
+                    </div>
                     <div class="user-profile-wrapper" style="position: relative;">
                         <div class="user-avatar" id="user-avatar-trigger">
                             <img alt="User Avatar" class="avatar-img" id="header-avatar-img" data-alt="Stylized avatar of a male developer"
@@ -903,62 +910,156 @@
         </div>
     </div>
 
-    <!-- ========== PROFILE MODAL ========== -->
-    <div class="modal-overlay" id="profile-modal" style="display: none;">
-        <div class="modal-container">
-            <div class="modal-header">
-                <div class="modal-title-group">
-                    <span class="material-symbols-outlined text-primary">person</span>
-                    <h3>Profile Settings</h3>
+    <!-- ============================================================ -->
+    <!-- PAGE: PROFILE                                                -->
+    <!-- ============================================================ -->
+    <div id="page-profile" class="page-section flex-1" style="display: none;">
+        <main class="dashboard-main" style="max-width: 1200px; margin: 0 auto; padding: 2rem;">
+            <div class="welcome-card" style="margin-bottom: 2rem;">
+                <div class="welcome-card-glow"></div>
+                <div class="welcome-card-content" style="display: flex; align-items: center; gap: 1rem;">
+                    <span class="material-symbols-outlined" style="font-size: 3rem; color: var(--primary);">person</span>
+                    <div class="welcome-text">
+                        <h1 class="welcome-title">Developer Profile</h1>
+                        <p class="welcome-desc">Manage your account settings, track your neural network contributions, and view your badge cabinet.</p>
+                    </div>
                 </div>
-                <button class="btn-modal-close" id="btn-profile-close" title="Close Profile">
-                    <span class="material-symbols-outlined">close</span>
-                </button>
             </div>
-            <div class="modal-body">
-                <!-- Avatar selection / upload area -->
-                <div class="settings-group text-center" style="display: flex; flex-direction: column; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem;">
-                    <label class="settings-label" style="margin-bottom: 0;">Profile Picture</label>
-                    <div class="avatar-preview-container" style="position: relative; width: 6rem; height: 6rem; margin-top: 0.25rem;">
-                        <img id="profile-avatar-preview" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDVcIe9ZT9DQI5mMwNKpm-zykqTRJPzLtMyQiTdsqBZBdEn6teIYpzmiTk2buZp86-mRYmCPsEU5HXOrE7hbJZkjjMVS1d6HGOmSAm0JDmRO3kL-ymM4NLBsO2bf7OraM2sswZSbYC0mNHoGfTGKuQW2_0SuuR8GPEsxC1BRs_85buWRuYPijvlc_yUV-s0ypbn4M40CYYfLf40GdzBaN7ST5NF0Osm0oYluYyqLGixWBdD8pyBlLSfss6Aen7PP18o6kjcUxNdJ_Q1" alt="Avatar Preview" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary); background-color: var(--card-bg);" />
-                        <label for="profile-avatar-upload" class="avatar-edit-badge" style="position: absolute; bottom: 0; right: 0; background: var(--primary); color: #fff; border-radius: 50%; width: 1.75rem; height: 1.75rem; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 2px solid var(--card-bg); transition: all 0.2s;">
-                            <span class="material-symbols-outlined" style="font-size: 1rem;">edit</span>
-                        </label>
-                        <input type="file" id="profile-avatar-upload" accept="image/*" style="display: none;" />
+
+            <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem;">
+                <!-- LEFT COLUMN: Account Configuration -->
+                <div class="glass-card" style="display: flex; flex-direction: column; gap: 1.5rem; padding: 1.5rem;">
+                    <!-- Avatar selection / upload area -->
+                    <div class="settings-group text-center" style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem;">
+                        <label class="settings-label" style="margin-bottom: 0;">Profile Picture</label>
+                        <div class="avatar-preview-container" style="position: relative; width: 6rem; height: 6rem;">
+                            <img id="profile-avatar-preview" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDVcIe9ZT9DQI5mMwNKpm-zykqTRJPzLtMyQiTdsqBZBdEn6teIYpzmiTk2buZp86-mRYmCPsEU5HXOrE7hbJZkjjMVS1d6HGOmSAm0JDmRO3kL-ymM4NLBsO2bf7OraM2sswZSbYC0mNHoGfTGKuQW2_0SuuR8GPEsxC1BRs_85buWRuYPijvlc_yUV-s0ypbn4M40CYYfLf40GdzBaN7ST5NF0Osm0oYluYyqLGixWBdD8pyBlLSfss6Aen7PP18o6kjcUxNdJ_Q1" alt="Avatar Preview" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary); background-color: var(--card-bg);" />
+                            <label for="profile-avatar-upload" class="avatar-edit-badge" style="position: absolute; bottom: 0; right: 0; background: var(--primary); color: #fff; border-radius: 50%; width: 1.8rem; height: 1.8rem; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 2px solid var(--card-bg); transition: all 0.2s;">
+                                <span class="material-symbols-outlined" style="font-size: 1rem;">edit</span>
+                            </label>
+                            <input type="file" id="profile-avatar-upload" accept="image/*" style="display: none;" />
+                        </div>
+                    </div>
+
+                    <!-- Name Input -->
+                    <div class="settings-group">
+                        <label for="profile-name" class="settings-label">Full Name</label>
+                        <input type="text" class="settings-input" id="profile-name" placeholder="Enter your full name">
+                    </div>
+
+                    <!-- Username Input (disabled or read-only) -->
+                    <div class="settings-group">
+                        <label for="profile-username" class="settings-label">Username (Email)</label>
+                        <input type="text" class="settings-input" id="profile-username" readonly style="opacity: 0.6; cursor: not-allowed;">
+                    </div>
+
+                    <!-- Password Input -->
+                    <div class="settings-group">
+                        <label for="profile-password" class="settings-label">New Password</label>
+                        <input type="password" class="settings-input" id="profile-password" placeholder="Enter new password (leave blank to keep current)">
+                    </div>
+
+                    <button class="btn-primary w-full" id="btn-profile-save" style="margin-top: 1rem;">Save Profile</button>
+
+                    <!-- Delete Account Option -->
+                    <div style="margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
+                        <div style="flex: 1;">
+                            <h4 style="color: #ef4444; font-size: 0.9rem; margin-bottom: 0.25rem; font-weight: 600;">Danger Zone</h4>
+                            <p style="color: var(--text-slate-400); font-size: 0.8rem; line-height: 1.3;">Delete account & data.</p>
+                        </div>
+                        <button class="btn-delete-sm" id="btn-delete-account" style="padding: 0.4rem 0.75rem; white-space: nowrap; font-size: 0.85rem;">Delete</button>
                     </div>
                 </div>
 
-                <!-- Name Input -->
-                <div class="settings-group">
-                    <label for="profile-name" class="settings-label">Full Name</label>
-                    <input type="text" class="settings-input" id="profile-name" placeholder="Enter your full name">
-                </div>
-
-                <!-- Username Input (disabled or read-only) -->
-                <div class="settings-group">
-                    <label for="profile-username" class="settings-label">Username (Email)</label>
-                    <input type="text" class="settings-input" id="profile-username" readonly style="opacity: 0.6; cursor: not-allowed;">
-                </div>
-
-                <!-- Password Input -->
-                <div class="settings-group">
-                    <label for="profile-password" class="settings-label">New Password</label>
-                    <input type="password" class="settings-input" id="profile-password" placeholder="Enter new password (leave blank to keep current)">
-                </div>
-
-                <!-- Delete Account Option -->
-                <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
-                    <div style="flex: 1;">
-                        <h4 style="color: #ef4444; font-size: 0.9rem; margin-bottom: 0.25rem; font-weight: 600;">Danger Zone</h4>
-                        <p style="color: var(--text-slate-400); font-size: 0.75rem; line-height: 1.2;">Permanently delete account and all projects.</p>
+                <!-- RIGHT COLUMN: Gamification & Contributions Calendar -->
+                <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                    <!-- Streak Card -->
+                    <div class="profile-streak-card glass-card" style="display: flex; align-items: center; justify-content: space-between; padding: 1.25rem; background: rgba(249, 115, 22, 0.05); border: 1px solid rgba(249, 115, 22, 0.2);">
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <span class="material-symbols-outlined" style="font-size: 3rem; color: #f97316;">local_fire_department</span>
+                            <div>
+                                <h4 style="font-size: 1.2rem; font-weight: 700; margin: 0; color: var(--text-light);" id="profile-streak-count">🔥 0-Day Streak</h4>
+                                <p style="font-size: 0.85rem; color: var(--text-slate-400); margin: 0; margin-top: 0.25rem;">Complete daily visualizer runs to stay active.</p>
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 0.8rem; color: var(--text-slate-400);">Longest Streak</div>
+                            <div style="font-size: 1.4rem; font-weight: 700; color: var(--text-light);" id="profile-longest-streak">0 days</div>
+                        </div>
                     </div>
-                    <button class="btn-delete-sm" id="btn-delete-account" style="padding: 0.4rem 0.65rem; white-space: nowrap;">Delete Account</button>
+
+                    <!-- Badges Panel -->
+                    <div class="glass-card" style="padding: 1.25rem;">
+                        <h4 class="settings-label" style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; font-size: 1.1rem;">
+                            <span class="material-symbols-outlined" style="font-size: 1.4rem; color: var(--primary);">workspace_premium</span>
+                            <span>Badge Cabinet</span>
+                        </h4>
+                        <div id="profile-badges-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
+                            <!-- Filled dynamically by main.js -->
+                        </div>
+                    </div>
+
+                    <!-- GitHub-Style Contribution Calendar -->
+                    <div style="margin-top: 2rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <h4 id="contribution-header-text" style="margin: 0; font-size: 1rem; font-weight: normal; color: var(--text-light);">
+                                0 hours spent in the last year
+                            </h4>
+                            <div style="font-size: 0.85rem; color: var(--text-slate-400); cursor: pointer;">Contribution settings ▼</div>
+                        </div>
+
+                        <div style="display: flex; gap: 1.5rem; align-items: flex-start;">
+                            <!-- Graph Container -->
+                            <div class="glass-card" style="padding: 1rem; flex: 1; border: 1px solid var(--border-color); overflow-x: auto;">
+                                <div style="display: flex;">
+                                    <!-- Day Labels -->
+                                    <div style="display: flex; flex-direction: column; justify-content: space-between; font-size: 0.75rem; color: var(--text-slate-400); width: 35px; height: 150px; padding-top: 5px; padding-bottom: 5px; margin-top: 20px;">
+                                        <span style="visibility: hidden;">Sun</span>
+                                        <span>Mon</span>
+                                        <span style="visibility: hidden;">Tue</span>
+                                        <span>Wed</span>
+                                        <span style="visibility: hidden;">Thu</span>
+                                        <span>Fri</span>
+                                        <span style="visibility: hidden;">Sat</span>
+                                    </div>
+                                    
+                                    <!-- Months and Grid -->
+                                    <div style="flex: 1; display: flex; flex-direction: column;">
+                                        <!-- Month Labels -->
+                                        <div id="contribution-months" style="display: flex; font-size: 0.75rem; color: var(--text-slate-400); margin-bottom: 5px; position: relative; height: 15px;">
+                                            <!-- Filled dynamically -->
+                                        </div>
+                                        
+                                        <!-- The Grid itself -->
+                                        <div id="contribution-calendar" style="display: grid; grid-template-columns: repeat(53, 1fr); grid-template-rows: repeat(7, 1fr); gap: 4px; width: 100%; height: 150px;">
+                                            <!-- Dynamically populated cells by main.js -->
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: var(--text-slate-400); margin-top: 1rem; margin-left: 35px;">
+                                    <a href="#" style="color: var(--text-slate-400); text-decoration: none;">Learn how we count time spent</a>
+                                    <div style="display: flex; gap: 4px; align-items: center;">
+                                        <span>Less</span>
+                                        <span style="width: 10px; height: 10px; border-radius: 2px; background: rgba(255,255,255,0.05);"></span>
+                                        <span style="width: 10px; height: 10px; border-radius: 2px; background: #0e4429;"></span>
+                                        <span style="width: 10px; height: 10px; border-radius: 2px; background: #006d32;"></span>
+                                        <span style="width: 10px; height: 10px; border-radius: 2px; background: #26a641;"></span>
+                                        <span style="width: 10px; height: 10px; border-radius: 2px; background: #39d353;"></span>
+                                        <span>More</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Year Selector List -->
+                            <div id="year-selector-list" style="width: 80px; display: flex; flex-direction: column; gap: 0.25rem;">
+                                <!-- Filled by main.js -->
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button class="btn-primary w-full" id="btn-profile-save">Save Profile</button>
-            </div>
-        </div>
+        </main>
     </div>
 
     <!-- AI Live Streaming Log Modal -->

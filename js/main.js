@@ -34,6 +34,8 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             window.location.href = './login.html';
+        } else {
+            loadDeveloperStats().catch(err => console.error(err));
         }
     })
     .catch(err => {
@@ -1454,45 +1456,250 @@ document.addEventListener('DOMContentLoaded', () => {
         resizeTimer = setTimeout(() => Visualizer.refresh(), 250);
     });
 
+    // Helper to fetch and render developer stats (streak, badges, calendar)
+    async function loadDeveloperStats() {
+        try {
+            const [streak, badges, contributions] = await Promise.all([
+                Storage.getStreak(),
+                Storage.getBadges(),
+                Storage.getContributions()
+            ]);
+
+            // 1. Render Streaks
+            const streakCountEl = document.getElementById('profile-streak-count');
+            const longestStreakEl = document.getElementById('profile-longest-streak');
+            const headerStreakBadge = document.getElementById('header-streak-badge');
+            const headerStreakCount = document.getElementById('header-streak-count');
+
+            if (streakCountEl) streakCountEl.textContent = `🔥 ${streak.current_streak}-Day Streak`;
+            if (longestStreakEl) longestStreakEl.textContent = `${streak.longest_streak} days`;
+            
+            if (headerStreakBadge && headerStreakCount) {
+                if (streak.current_streak > 0) {
+                    headerStreakCount.textContent = streak.current_streak;
+                    headerStreakBadge.style.display = 'flex';
+                } else {
+                    headerStreakBadge.style.display = 'none';
+                }
+            }
+
+            // 2. Render Badges Cabinet
+            const badgesGrid = document.getElementById('profile-badges-grid');
+            if (badgesGrid) {
+                badgesGrid.innerHTML = '';
+                badges.forEach(badge => {
+                    const badgeCard = document.createElement('div');
+                    badgeCard.title = `${badge.name}: ${badge.description} (Requires ${badge.rule_threshold} ${badge.rule_type.replace('total_', '')})`;
+                    badgeCard.style.cssText = `
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        padding: 0.5rem;
+                        text-align: center;
+                        border-radius: 0.35rem;
+                        background: ${badge.unlocked ? 'rgba(var(--primary-rgb), 0.08)' : 'rgba(255,255,255,0.02)'};
+                        border: 1px solid ${badge.unlocked ? 'var(--primary)' : 'var(--border-color)'};
+                        opacity: ${badge.unlocked ? '1' : '0.45'};
+                        box-shadow: ${badge.unlocked ? '0 0 10px rgba(var(--primary-rgb), 0.15)' : 'none'};
+                        position: relative;
+                        cursor: help;
+                    `;
+                    
+                    const badgeIcon = document.createElement('span');
+                    badgeIcon.className = 'material-symbols-outlined';
+                    badgeIcon.style.cssText = `font-size: 1.75rem; margin-bottom: 0.25rem; color: ${badge.unlocked ? 'var(--primary)' : 'var(--text-slate-400)'};`;
+                    badgeIcon.textContent = badge.unlocked ? badge.icon : 'lock';
+                    
+                    const badgeTitle = document.createElement('span');
+                    badgeTitle.style.cssText = 'font-size: 0.7rem; font-weight: 600; color: var(--text-light); word-break: break-word;';
+                    badgeTitle.textContent = badge.name;
+
+                    badgeCard.appendChild(badgeIcon);
+                    badgeCard.appendChild(badgeTitle);
+                    badgesGrid.appendChild(badgeCard);
+                });
+            }
+
+            // 3. Render Contribution Calendar (GitHub-style 53 weeks)
+            const calendarEl = document.getElementById('contribution-calendar');
+            
+            if (calendarEl) {
+                const contributionsMap = {};
+                contributions.forEach(c => {
+                    const dateStr = new Date(c.activity_date).toISOString().slice(0, 10);
+                    contributionsMap[dateStr] = (contributionsMap[dateStr] || 0) + c.count;
+                });
+
+                // We only show the current year since the app didn't exist before
+                const currentYear = new Date().getFullYear();
+
+                // Setup Year List
+                const yearListContainer = document.getElementById('year-selector-list');
+                if (yearListContainer) {
+                    yearListContainer.innerHTML = '';
+                    const yBtn = document.createElement('button');
+                    yBtn.className = 'btn-secondary active';
+                    yBtn.textContent = currentYear;
+                    yBtn.style.padding = '0.25rem 0.75rem';
+                    yBtn.style.fontSize = '0.85rem';
+                    yBtn.style.background = 'var(--primary)';
+                    yBtn.style.color = '#fff';
+                    yBtn.style.border = 'none';
+                    yBtn.style.borderRadius = '4px';
+                    yBtn.style.cursor = 'pointer';
+                    yearListContainer.appendChild(yBtn);
+                }
+
+                function renderCalendarForYear(targetYear, map) {
+                    calendarEl.innerHTML = '';
+                    calendarEl.style.gridAutoFlow = 'column';
+                    
+                    const monthsEl = document.getElementById('contribution-months');
+                    if (monthsEl) monthsEl.innerHTML = '';
+
+                    let startDate, endDate;
+                    if (targetYear === currentYear) {
+                        endDate = new Date();
+                        startDate = new Date();
+                        startDate.setDate(endDate.getDate() - 370);
+                    } else {
+                        startDate = new Date(targetYear, 0, 1);
+                        endDate = new Date(targetYear, 11, 31);
+                    }
+
+                    const startDay = startDate.getDay();
+                    startDate.setDate(startDate.getDate() - startDay);
+                    
+                    const totalDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + (7 - endDate.getDay());
+                    const tempDate = new Date(startDate);
+                    
+                    let totalMinutesSpent = 0;
+                    let lastMonth = -1;
+
+                    for (let i = 0; i < totalDays; i++) {
+                        const dateStr = tempDate.toISOString().slice(0, 10);
+                        const count = map[dateStr] || 0;
+                        
+                        if (count > 0 && targetYear === currentYear) {
+                            totalMinutesSpent += count * 25;
+                        }
+                        
+                        // Month Labels
+                        if (tempDate.getDate() === 1 || (i === 0 && tempDate.getDate() < 15)) {
+                            if (tempDate.getMonth() !== lastMonth) {
+                                lastMonth = tempDate.getMonth();
+                                if (monthsEl) {
+                                    const monthSpan = document.createElement('span');
+                                    monthSpan.textContent = tempDate.toLocaleDateString(undefined, { month: 'short' });
+                                    monthSpan.style.position = 'absolute';
+                                    monthSpan.style.left = `calc(${(i / 7) / 53 * 100}% + 2px)`;
+                                    monthsEl.appendChild(monthSpan);
+                                }
+                            }
+                        }
+                        
+                        const cell = document.createElement('div');
+                        cell.style.borderRadius = '2px';
+                        cell.style.width = '100%';
+                        cell.style.height = '100%';
+                        
+                        // If it's a past year, and date exceeds end of that year, leave blank or transparent
+                        if (targetYear !== currentYear && tempDate > endDate) {
+                            cell.style.visibility = 'hidden';
+                        } else {
+                            if (count === 0) {
+                                cell.style.background = 'rgba(255,255,255,0.03)';
+                            } else if (count === 1) {
+                                cell.style.background = '#0e4429';
+                            } else if (count <= 3) {
+                                cell.style.background = '#006d32';
+                            } else if (count <= 6) {
+                                cell.style.background = '#26a641';
+                            } else {
+                                cell.style.background = '#39d353';
+                            }
+                            
+                            const formattedDate = tempDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+                            
+                            let timeSpentText = "No time spent";
+                            if (count > 0) {
+                                let cellMins = count * 25;
+                                let h = Math.floor(cellMins / 60);
+                                let m = cellMins % 60;
+                                if (h > 0) timeSpentText = `${h}h ${m}m spent`;
+                                else timeSpentText = `${m}m spent`;
+                            }
+                            cell.title = `${timeSpentText} on ${formattedDate}`;
+                        }
+                        
+                        calendarEl.appendChild(cell);
+                        tempDate.setDate(tempDate.getDate() + 1);
+                    }
+                    
+                    // Update header text
+                    const headerText = document.getElementById('contribution-header-text');
+                    if (headerText) {
+                        let totalHours = Math.floor(totalMinutesSpent / 60);
+                        headerText.textContent = `${totalHours} hours spent in the last year`;
+                    }
+                }
+
+                // Initial render
+                renderCalendarForYear(currentYear, contributionsMap);
+            }
+        } catch (e) {
+            console.warn('Failed to load developer stats:', e);
+        }
+    }
+
+    // Bind custom event listener
+    document.addEventListener('user-stats-updated', () => {
+        loadDeveloperStats().catch(err => console.error(err));
+    });
+
     // ═══════════════════════════════════════
     // PROFILE MODAL HANDLERS
     // ═══════════════════════════════════════
-    const profileModal = document.getElementById('profile-modal');
+    const pageProfile = document.getElementById('page-profile');
     const btnOpenProfile = document.getElementById('btn-open-profile');
-    const btnProfileClose = document.getElementById('btn-profile-close');
     const btnProfileSave = document.getElementById('btn-profile-save');
     const profileAvatarUpload = document.getElementById('profile-avatar-upload');
     const profileAvatarPreview = document.getElementById('profile-avatar-preview');
     const btnDeleteAccount = document.getElementById('btn-delete-account');
 
-    if (btnOpenProfile && profileModal) {
-        btnOpenProfile.addEventListener('click', () => {
-            profileModal.style.display = 'flex';
-            
-            const token = localStorage.getItem('token');
-            if (token) {
-                fetch('/api/auth/verify', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                })
-                .then(res => res.ok ? res.json() : null)
-                .then(userData => {
-                    if (userData) {
-                        document.getElementById('profile-name').value = userData.name || '';
-                        document.getElementById('profile-username').value = userData.email || '';
-                        if (userData.avatar) {
-                            profileAvatarPreview.src = userData.avatar;
-                        }
-                    }
-                })
-                .catch(err => console.error('Failed to load profile details:', err));
-            }
+    // Make header streak badge click open the profile page
+    const headerStreakBadge = document.getElementById('header-streak-badge');
+    if (headerStreakBadge) {
+        headerStreakBadge.addEventListener('click', () => {
+            openProfilePage();
         });
     }
 
-    if (btnProfileClose && profileModal) {
-        btnProfileClose.addEventListener('click', () => {
-            profileModal.style.display = 'none';
-        });
+    function openProfilePage() {
+        navigateTo('profile');
+        loadDeveloperStats().catch(err => console.error(err));
+        
+        const token = localStorage.getItem('token');
+        if (token) {
+            fetch('/api/auth/verify', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            .then(res => res.ok ? res.json() : null)
+            .then(userData => {
+                if (userData) {
+                    document.getElementById('profile-name').value = userData.name || '';
+                    document.getElementById('profile-username').value = userData.email || '';
+                    if (userData.avatar) {
+                        profileAvatarPreview.src = userData.avatar;
+                    }
+                }
+            })
+            .catch(err => console.error('Failed to load profile details:', err));
+        }
+    }
+
+    if (btnOpenProfile) {
+        btnOpenProfile.addEventListener('click', openProfilePage);
     }
 
     if (profileAvatarUpload && profileAvatarPreview) {
@@ -1545,7 +1752,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     
                     document.getElementById('profile-password').value = '';
-                    profileModal.style.display = 'none';
+                    closeProfileModal();
                 } else {
                     const errData = await res.json();
                     showToast(errData.error || 'Failed to update profile.');

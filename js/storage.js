@@ -172,6 +172,7 @@ const Storage = (() => {
                 throw new Error(errData.error || 'Server rejected project save');
             }
 
+            document.dispatchEvent(new CustomEvent('user-stats-updated'));
             return true;
         } catch (e) {
             console.error('Backend save failed:', e);
@@ -408,9 +409,70 @@ const Storage = (() => {
                 if (statRunsCount && typeof data.visualizer_runs !== 'undefined') {
                     statRunsCount.textContent = data.visualizer_runs;
                 }
+                document.dispatchEvent(new CustomEvent('user-stats-updated'));
             }
         } catch (e) {
             console.warn('Failed to increment runs on backend:', e);
+        }
+    }
+
+    /**
+     * Fetch user contributions from server
+     */
+    async function getContributions() {
+        const token = localStorage.getItem('token');
+        if (!token) return [];
+        try {
+            const response = await fetch('/api/users/contributions', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.ok) {
+                return await response.json();
+            }
+            return [];
+        } catch (e) {
+            console.warn('Failed to fetch contributions:', e);
+            return [];
+        }
+    }
+
+    /**
+     * Fetch user badges/achievements from server
+     */
+    async function getBadges() {
+        const token = localStorage.getItem('token');
+        if (!token) return [];
+        try {
+            const response = await fetch('/api/users/badges', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.ok) {
+                return await response.json();
+            }
+            return [];
+        } catch (e) {
+            console.warn('Failed to fetch badges:', e);
+            return [];
+        }
+    }
+
+    /**
+     * Fetch user streak details from server
+     */
+    async function getStreak() {
+        const token = localStorage.getItem('token');
+        if (!token) return { current_streak: 0, longest_streak: 0, last_activity_date: null };
+        try {
+            const response = await fetch('/api/users/streak', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.ok) {
+                return await response.json();
+            }
+            return { current_streak: 0, longest_streak: 0, last_activity_date: null };
+        } catch (e) {
+            console.warn('Failed to fetch streak:', e);
+            return { current_streak: 0, longest_streak: 0, last_activity_date: null };
         }
     }
 
@@ -421,7 +483,10 @@ const Storage = (() => {
         deleteProject,
         getStorageUsage,
         updateDashboardStats,
-        incrementRuns
+        incrementRuns,
+        getContributions,
+        getBadges,
+        getStreak
     };
 })();
 

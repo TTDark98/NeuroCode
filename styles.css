@@ -3161,3 +3161,62 @@ html.dark .architect-panel-right {
     font-weight: bold;
     fill: var(--primary);
 }
+
+/* ======================================
+   Developer Stats & Streak Styles
+   ====================================== */
+@keyframes flamePulse {
+    0% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 2px rgba(249, 115, 22, 0.4));
+    }
+    50% {
+        transform: scale(1.06);
+        filter: drop-shadow(0 0 6px rgba(249, 115, 22, 0.7));
+    }
+    100% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 2px rgba(249, 115, 22, 0.4));
+    }
+}
+
+.streak-header-badge {
+    animation: flamePulse 2s infinite ease-in-out;
+    transition: all 0.2s ease-in-out;
+}
+
+.streak-header-badge:hover {
+    transform: scale(1.05);
+    background-color: rgba(249, 115, 22, 0.18) !important;
+    border-color: rgba(249, 115, 22, 0.45) !important;
+}
+
+.badge-item {
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.badge-item.unlocked:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 15px rgba(var(--primary-rgb), 0.25) !important;
+    background: rgba(var(--primary-rgb), 0.12) !important;
+}
+
+.badge-item.locked:hover {
+    opacity: 0.65 !important;
+}
+
+/* Year Selector Dropdown */
+.year-dropdown {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    border-radius: 0.375rem;
+    overflow: hidden;
+}
+
+.year-dropdown .dropdown-item {
+    transition: background-color 0.15s ease;
+}
+
+.year-dropdown .dropdown-item:hover {
+    background-color: color-mix(in srgb, var(--primary) 15%, transparent) !important;
+    color: var(--primary) !important;
+}

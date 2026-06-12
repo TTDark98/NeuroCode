@@ -43,8 +43,77 @@ pool.query('SELECT 1')
     .then(async () => {
         console.log('✔ Connected to MariaDB database successfully.');
         try {
+            // Update users table
             await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS name VARCHAR(255) NULL');
             await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar LONGTEXT NULL');
+            
+            // Create user_activity_log
+            await pool.query(`
+                CREATE TABLE IF NOT EXISTS user_activity_log (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT NOT NULL,
+                    activity_type ENUM('save_project', 'run_visualizer', 'share_project', 'upvote_project') NOT NULL,
+                    activity_date DATE NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    INDEX idx_user_date (user_id, activity_date)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            `);
+
+            // Create badges
+            await pool.query(`
+                CREATE TABLE IF NOT EXISTS badges (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    name VARCHAR(100) UNIQUE NOT NULL,
+                    description VARCHAR(255) NOT NULL,
+                    icon VARCHAR(50) NOT NULL,
+                    color_theme VARCHAR(50) NOT NULL,
+                    rule_type ENUM('total_runs', 'total_projects', 'total_shares', 'total_time') NOT NULL,
+                    rule_threshold INT NOT NULL
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            `);
+
+            // Create user_badges
+            await pool.query(`
+                CREATE TABLE IF NOT EXISTS user_badges (
+                    user_id INT NOT NULL,
+                    badge_id INT NOT NULL,
+                    unlocked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (user_id, badge_id),
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (badge_id) REFERENCES badges(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            `);
+
+            // Create user_streaks
+            await pool.query(`
+                CREATE TABLE IF NOT EXISTS user_streaks (
+                    user_id INT PRIMARY KEY,
+                    current_streak INT DEFAULT 1,
+                    longest_streak INT DEFAULT 1,
+                    last_activity_date DATE NOT NULL,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            `);
+
+            // Seed default badges if empty
+            const [badgeCount] = await pool.query('SELECT COUNT(*) as count FROM badges');
+            if (badgeCount[0].count === 0) {
+                const defaultBadges = [
+                    ['First Steps', 'Run your first algorithm visualization.', 'play_circle', 'badge-blue', 'total_runs', 1],
+                    ['Code Sculptor', 'Save 5 custom algorithm projects.', 'design_services', 'badge-purple', 'total_projects', 5],
+                    ['Community Beacon', 'Publish an algorithm to the shared gallery.', 'share', 'badge-orange', 'total_shares', 1],
+                    ['Marathoner', 'Spend 1 hour active learning on the platform.', 'hourglass_empty', 'badge-gold', 'total_time', 3600]
+                ];
+                for (const badge of defaultBadges) {
+                    await pool.query(
+                        'INSERT INTO badges (name, description, icon, color_theme, rule_type, rule_threshold) VALUES (?, ?, ?, ?, ?, ?)',
+                        badge
+                    );
+                }
+                console.log('✔ Default badges seeded successfully.');
+            }
+
             console.log('✔ Database schema verified/updated.');
         } catch (e) {
             console.error('✘ Failed to run schema migrations:', e.message);
@@ -278,6 +347,7 @@ app.post('/api/projects', authMiddleware, async (req, res) => {
                 'UPDATE projects SET code = ?, input_data = ?, visualization_type = ?, steps_json = ? WHERE id = ?',
                 [code, input_data, visualization_type || 'bars', steps_json || null, projectId]
             );
+            logUserActivity(req.user.id, 'save_project').catch(err => console.error(err));
             res.json({ message: 'Project updated successfully!', id: projectId });
         } else {
             // Insert new project
@@ -285,6 +355,7 @@ app.post('/api/projects', authMiddleware, async (req, res) => {
                 'INSERT INTO projects (user_id, name, code, input_data, visualization_type, steps_json) VALUES (?, ?, ?, ?, ?, ?)',
                 [req.user.id, name, code, input_data, visualization_type || 'bars', steps_json || null]
             );
+            logUserActivity(req.user.id, 'save_project').catch(err => console.error(err));
             res.status(201).json({ message: 'Project saved successfully!', id: result.insertId });
         }
     } catch (err) {
@@ -314,6 +385,148 @@ app.delete('/api/projects/:id', authMiddleware, async (req, res) => {
     }
 });
 
+// Helper functions for user activity logs, streaks and achievements/badges
+async function checkAndUnlockBadges(userId) {
+    try {
+        const [projectCountRow] = await pool.query('SELECT COUNT(*) as count FROM projects WHERE user_id = ?', [userId]);
+        const [userRow] = await pool.query('SELECT visualizer_runs, time_spent FROM users WHERE id = ?', [userId]);
+        
+        const totalProjects = projectCountRow[0] ? projectCountRow[0].count : 0;
+        const totalRuns = userRow.length > 0 ? userRow[0].visualizer_runs : 0;
+        const totalTime = userRow.length > 0 ? userRow[0].time_spent : 0;
+
+        const [sharesRow] = await pool.query('SELECT COUNT(*) as count FROM projects WHERE user_id = ? AND steps_json IS NOT NULL', [userId]);
+        const totalShares = sharesRow[0] ? sharesRow[0].count : 0;
+
+        const [unlockedBadges] = await pool.query('SELECT badge_id FROM user_badges WHERE user_id = ?', [userId]);
+        const unlockedIds = unlockedBadges.map(b => b.badge_id);
+
+        const [allBadges] = await pool.query('SELECT * FROM badges');
+        for (const badge of allBadges) {
+            if (unlockedIds.includes(badge.id)) continue;
+
+            let conditionMet = false;
+            if (badge.rule_type === 'total_runs' && totalRuns >= badge.rule_threshold) {
+                conditionMet = true;
+            } else if (badge.rule_type === 'total_projects' && totalProjects >= badge.rule_threshold) {
+                conditionMet = true;
+            } else if (badge.rule_type === 'total_shares' && totalShares >= badge.rule_threshold) {
+                conditionMet = true;
+            } else if (badge.rule_type === 'total_time' && totalTime >= badge.rule_threshold) {
+                conditionMet = true;
+            }
+
+            if (conditionMet) {
+                await pool.query('INSERT INTO user_badges (user_id, badge_id) VALUES (?, ?)', [userId, badge.id]);
+                console.log(`✔ User ${userId} unlocked badge: ${badge.name}`);
+            }
+        }
+    } catch (err) {
+        console.error('Error checking user badges:', err);
+    }
+}
+
+async function logUserActivity(userId, activityType) {
+    const today = new Date().toISOString().slice(0, 10);
+    try {
+        // 1. Log activity
+        await pool.query(
+            'INSERT INTO user_activity_log (user_id, activity_type, activity_date) VALUES (?, ?, ?)',
+            [userId, activityType, today]
+        );
+
+        // 2. Update Daily Streak
+        const [streakRow] = await pool.query('SELECT current_streak, longest_streak, last_activity_date FROM user_streaks WHERE user_id = ?', [userId]);
+        if (streakRow.length === 0) {
+            await pool.query(
+                'INSERT INTO user_streaks (user_id, current_streak, longest_streak, last_activity_date) VALUES (?, 1, 1, ?)',
+                [userId, today]
+            );
+        } else {
+            const streak = streakRow[0];
+            const lastDate = new Date(streak.last_activity_date);
+            const currentDate = new Date(today);
+            const diffTime = Math.abs(currentDate - lastDate);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            if (diffDays === 1) {
+                const newStreak = streak.current_streak + 1;
+                const newLongest = Math.max(streak.longest_streak, newStreak);
+                await pool.query(
+                    'UPDATE user_streaks SET current_streak = ?, longest_streak = ?, last_activity_date = ? WHERE user_id = ?',
+                    [newStreak, newLongest, today, userId]
+                );
+            } else if (diffDays > 1) {
+                await pool.query(
+                    'UPDATE user_streaks SET current_streak = 1, last_activity_date = ? WHERE user_id = ?',
+                    [today, userId]
+                );
+            }
+        }
+
+        // 3. Trigger badge check
+        await checkAndUnlockBadges(userId);
+    } catch (err) {
+        console.error('Error logging user activity:', err);
+    }
+}
+
+// ═══════════════════════════════════════
+// API ROUTES: GAMIFICATION & ACTIVITIES
+// ═══════════════════════════════════════
+
+// Get user contributions for the calendar
+app.get('/api/users/contributions', authMiddleware, async (req, res) => {
+    try {
+        const [rows] = await pool.query(
+            'SELECT activity_date, COUNT(*) as count FROM user_activity_log WHERE user_id = ? GROUP BY activity_date ORDER BY activity_date ASC',
+            [req.user.id]
+        );
+        res.json(rows);
+    } catch (err) {
+        console.error('Contributions API Error:', err);
+        res.status(500).json({ error: 'Failed to fetch contributions.' });
+    }
+});
+
+// Get user badges
+app.get('/api/users/badges', authMiddleware, async (req, res) => {
+    try {
+        const [allBadges] = await pool.query('SELECT id, name, description, icon, color_theme, rule_type, rule_threshold FROM badges');
+        const [unlockedRows] = await pool.query('SELECT badge_id, unlocked_at FROM user_badges WHERE user_id = ?', [req.user.id]);
+        
+        const unlockedMap = {};
+        unlockedRows.forEach(row => {
+            unlockedMap[row.badge_id] = row.unlocked_at;
+        });
+
+        const badges = allBadges.map(badge => ({
+            ...badge,
+            unlocked: typeof unlockedMap[badge.id] !== 'undefined',
+            unlocked_at: unlockedMap[badge.id] || null
+        }));
+
+        res.json(badges);
+    } catch (err) {
+        console.error('Badges API Error:', err);
+        res.status(500).json({ error: 'Failed to fetch badges.' });
+    }
+});
+
+// Get user streak details
+app.get('/api/users/streak', authMiddleware, async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT current_streak, longest_streak, last_activity_date FROM user_streaks WHERE user_id = ?', [req.user.id]);
+        if (rows.length === 0) {
+            return res.json({ current_streak: 0, longest_streak: 0, last_activity_date: null });
+        }
+        res.json(rows[0]);
+    } catch (err) {
+        console.error('Streak API Error:', err);
+        res.status(500).json({ error: 'Failed to fetch streak.' });
+    }
+});
+
 // ═══════════════════════════════════════
 // API ROUTES: VISUALIZATION TRACKING
 // ═══════════════════════════════════════
@@ -330,6 +543,8 @@ app.post('/api/users/increment-runs', authMiddleware, async (req, res) => {
         if (users.length === 0) {
             return res.status(404).json({ error: 'User not found.' });
         }
+
+        logUserActivity(req.user.id, 'run_visualizer').catch(err => console.error(err));
 
         res.json({ visualizer_runs: users[0].visualizer_runs });
     } catch (err) {
@@ -356,6 +571,8 @@ app.post('/api/users/increment-time', authMiddleware, async (req, res) => {
         if (users.length === 0) {
             return res.status(404).json({ error: 'User not found.' });
         }
+
+        checkAndUnlockBadges(req.user.id).catch(err => console.error(err));
 
         res.json({ time_spent: users[0].time_spent });
     } catch (err) {
