@@ -315,6 +315,9 @@
                             <option value="LinkedListDelete.cpp">LinkedListDelete.cpp</option>
                             <option value="BFS.cpp">BFS.cpp</option>
                             <option value="DFS.cpp">DFS.cpp</option>
+                            <option value="Prims.cpp">Prims.cpp</option>
+                            <option value="Kruskals.cpp">Kruskals.cpp</option>
+                            <option value="FloydWarshall.cpp">FloydWarshall.cpp</option>
                         </select>
                     </div>
                     <div class="flex gap-2">
@@ -723,6 +726,102 @@
                                 style="color: color-mix(in srgb, var(--primary) 60%, transparent); font-size: 0.75rem;">
                                 <span class="material-symbols-outlined" style="font-size: 0.875rem;">grain</span>
                                 <span>Layer Search</span>
+                            </div>
+                            <button class="library-link" data-action-page="studio"
+                                style="background: none; border: none; cursor: pointer;">
+                                Open Implementation
+                                <span class="material-symbols-outlined"
+                                    style="font-size: 1.125rem;">arrow_forward</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Prim's MST -->
+                <div class="glass-card algorithm-card flex flex-col" data-algorithm="prims">
+                    <div class="card-image-wrapper">
+                        <div class="card-gradient-primary" style="position: absolute; inset: 0;"></div>
+                        <div class="card-icon-bg">
+                            <span class="material-symbols-outlined" style="color: #10b981;">account_tree</span>
+                        </div>
+                    </div>
+                    <div class="card-body flex flex-col flex-1">
+                        <div class="card-title-row">
+                            <h5 class="card-title">Prim's MST</h5>
+                            <span class="badge badge-legacy">O(E log V)</span>
+                        </div>
+                        <p class="card-desc">
+                            Finds a Minimum Spanning Tree for a weighted undirected graph by building the tree one vertex at a time.
+                        </p>
+                        <div class="mt-auto pt-4 flex justify-between items-center"
+                            style="border-top: 1px solid color-mix(in srgb, var(--primary) 10%, transparent);">
+                            <div class="flex items-center gap-2"
+                                style="color: color-mix(in srgb, var(--primary) 60%, transparent); font-size: 0.75rem;">
+                                <span class="material-symbols-outlined" style="font-size: 0.875rem;">account_tree</span>
+                                <span>Spanning Tree</span>
+                            </div>
+                            <button class="library-link" data-action-page="studio"
+                                style="background: none; border: none; cursor: pointer;">
+                                Open Implementation
+                                <span class="material-symbols-outlined"
+                                    style="font-size: 1.125rem;">arrow_forward</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Kruskal's MST -->
+                <div class="glass-card algorithm-card flex flex-col" data-algorithm="kruskals">
+                    <div class="card-image-wrapper">
+                        <div class="card-gradient-primary" style="position: absolute; inset: 0;"></div>
+                        <div class="card-icon-bg">
+                            <span class="material-symbols-outlined" style="color: #f59e0b;">polyline</span>
+                        </div>
+                    </div>
+                    <div class="card-body flex flex-col flex-1">
+                        <div class="card-title-row">
+                            <h5 class="card-title">Kruskal's MST</h5>
+                            <span class="badge badge-legacy">O(E log E)</span>
+                        </div>
+                        <p class="card-desc">
+                            Finds a Minimum Spanning Tree for a connected weighted graph by sorting all edges and adding them.
+                        </p>
+                        <div class="mt-auto pt-4 flex justify-between items-center"
+                            style="border-top: 1px solid color-mix(in srgb, var(--primary) 10%, transparent);">
+                            <div class="flex items-center gap-2"
+                                style="color: color-mix(in srgb, var(--primary) 60%, transparent); font-size: 0.75rem;">
+                                <span class="material-symbols-outlined" style="font-size: 0.875rem;">polyline</span>
+                                <span>Spanning Tree</span>
+                            </div>
+                            <button class="library-link" data-action-page="studio"
+                                style="background: none; border: none; cursor: pointer;">
+                                Open Implementation
+                                <span class="material-symbols-outlined"
+                                    style="font-size: 1.125rem;">arrow_forward</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Floyd-Warshall APSP -->
+                <div class="glass-card algorithm-card flex flex-col" data-algorithm="floydWarshall">
+                    <div class="card-image-wrapper">
+                        <div class="card-gradient-primary" style="position: absolute; inset: 0;"></div>
+                        <div class="card-icon-bg">
+                            <span class="material-symbols-outlined" style="color: #ef4444;">route</span>
+                        </div>
+                    </div>
+                    <div class="card-body flex flex-col flex-1">
+                        <div class="card-title-row">
+                            <h5 class="card-title">Floyd-Warshall</h5>
+                            <span class="badge badge-legacy">O(V³)</span>
+                        </div>
+                        <p class="card-desc">
+                            Finds shortest paths between all pairs of vertices in a weighted graph.
+                        </p>
+                        <div class="mt-auto pt-4 flex justify-between items-center"
+                            style="border-top: 1px solid color-mix(in srgb, var(--primary) 10%, transparent);">
+                            <div class="flex items-center gap-2"
+                                style="color: color-mix(in srgb, var(--primary) 60%, transparent); font-size: 0.75rem;">
+                                <span class="material-symbols-outlined" style="font-size: 0.875rem;">route</span>
+                                <span>Shortest Path</span>
                             </div>
                             <button class="library-link" data-action-page="studio"
                                 style="background: none; border: none; cursor: pointer;">

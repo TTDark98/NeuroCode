@@ -2201,6 +2201,39 @@ html.dark .dark\:text-primary {
     stroke-width: 2.5;
 }
 
+.graph-edge-mst {
+    stroke: #10b981;
+    stroke-width: 3.5;
+}
+
+.graph-edge-compare {
+    stroke: #f59e0b;
+    stroke-width: 3.5;
+    stroke-dasharray: 6 4;
+    animation: dash-flow 1s linear infinite;
+}
+
+.graph-edge-discard {
+    stroke: #ef4444;
+    stroke-width: 2.5;
+    stroke-dasharray: 4 4;
+    opacity: 0.6;
+}
+
+.graph-edge-label {
+    fill: var(--text-color);
+    font-size: 0.8rem;
+    font-weight: bold;
+    font-family: monospace;
+    pointer-events: none;
+    text-shadow: 0px 0px 4px var(--bg-color), 0px 0px 4px var(--bg-color);
+}
+
+@keyframes dash-flow {
+    from { stroke-dashoffset: 10; }
+    to { stroke-dashoffset: 0; }
+}
+
 .graph-node {
     fill: color-mix(in srgb, var(--primary) 15%, transparent);
     stroke: color-mix(in srgb, var(--primary) 40%, transparent);

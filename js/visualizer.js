@@ -448,7 +448,7 @@ const Visualizer = (() => {
     }
 
     // ─────────────────────────────────────
-    // GRAPH VISUALIZATION (BFS / DFS)
+    // GRAPH VISUALIZATION (BFS / DFS / MST / APSP)
     // ─────────────────────────────────────
     function renderGraphStep(step) {
         if (!step.graph) return;
@@ -462,6 +462,10 @@ const Visualizer = (() => {
         if (step.highlights) {
             step.highlights.forEach(h => { highlightMap[h.node] = h.type; });
         }
+        
+        const edgeHighlightMap = step.edgeHighlights || {};
+        const edgeWeights = step.graph.edgeWeights || {};
+        const isDirected = step.graph.directed || false;
 
         // Calculate positions (circle layout)
         if (Object.keys(graphPositions).length === 0) {
@@ -494,12 +498,14 @@ const Visualizer = (() => {
         for (const node of nodes) {
             const neighbors = adjacencyList[node] || [];
             for (const neighbor of neighbors) {
-                const edgeKey = [Math.min(node, neighbor), Math.max(node, neighbor)].join('-');
-                if (drawnEdges.has(edgeKey)) continue;
+                const edgeKey = isDirected ? `${node}-${neighbor}` : `${Math.min(node, neighbor)}-${Math.max(node, neighbor)}`;
+                if (!isDirected && drawnEdges.has(edgeKey)) continue;
                 drawnEdges.add(edgeKey);
 
                 const p1 = graphPositions[node];
                 const p2 = graphPositions[neighbor];
+
+                const group = document.createElementNS(svgNS, 'g');
 
                 const line = document.createElementNS(svgNS, 'line');
                 line.setAttribute('x1', p1.x);
@@ -508,12 +514,48 @@ const Visualizer = (() => {
                 line.setAttribute('y2', p2.y);
                 line.setAttribute('class', 'graph-edge');
 
-                // Highlight edge if both endpoints are visited
-                if (visited.has(node) && visited.has(neighbor)) {
+                // Check edge highlights
+                const hType = edgeHighlightMap[edgeKey] || edgeHighlightMap[`${node}-${neighbor}`] || edgeHighlightMap[`${neighbor}-${node}`];
+
+                if (hType === 'mst') {
+                    line.classList.add('graph-edge-mst');
+                } else if (hType === 'compare') {
+                    line.classList.add('graph-edge-compare');
+                } else if (hType === 'discard') {
+                    line.classList.add('graph-edge-discard');
+                } else if (visited.has(node) && visited.has(neighbor)) {
                     line.classList.add('graph-edge-visited');
                 }
 
-                svg.appendChild(line);
+                group.appendChild(line);
+
+                // Check for weights
+                const weight = edgeWeights[edgeKey] !== undefined ? edgeWeights[edgeKey] : 
+                               edgeWeights[`${node}-${neighbor}`] !== undefined ? edgeWeights[`${node}-${neighbor}`] :
+                               edgeWeights[`${neighbor}-${node}`] !== undefined ? edgeWeights[`${neighbor}-${node}`] : null;
+
+                if (weight !== null) {
+                    const text = document.createElementNS(svgNS, 'text');
+                    
+                    // Offset text slightly above the line to prevent overlap
+                    const dx = p2.x - p1.x;
+                    const dy = p2.y - p1.y;
+                    const len = Math.sqrt(dx*dx + dy*dy) || 1;
+                    const nx = -dy / len;
+                    const ny = dx / len;
+                    
+                    text.setAttribute('x', (p1.x + p2.x) / 2 + nx * 10);
+                    text.setAttribute('y', (p1.y + p2.y) / 2 + ny * 10);
+                    text.setAttribute('text-anchor', 'middle');
+                    text.setAttribute('dominant-baseline', 'middle');
+                    text.setAttribute('class', 'graph-edge-label');
+                    
+                    // Add background rect or text-shadow for readability (handled in CSS)
+                    text.textContent = weight === Infinity || weight === 1e9 ? '∞' : weight;
+                    group.appendChild(text);
+                }
+
+                svg.appendChild(group);
             }
         }
 

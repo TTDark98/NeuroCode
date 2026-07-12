@@ -434,6 +434,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 'linkedListDelete': 'LinkedListDelete.cpp',
                 'bfs': 'BFS.cpp',
                 'dfs': 'DFS.cpp',
+                'prims': 'Prims.cpp',
+                'kruskals': 'Kruskals.cpp',
+                'floydWarshall': 'FloydWarshall.cpp',
             };
             codeSelect.value = reverseMapping[algorithmKey] || 'new';
         }
@@ -570,6 +573,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 'LinkedListDelete.cpp': 'linkedListDelete',
                 'BFS.cpp': 'bfs',
                 'DFS.cpp': 'dfs',
+                'Prims.cpp': 'prims',
+                'Kruskals.cpp': 'kruskals',
+                'FloydWarshall.cpp': 'floydWarshall',
             };
             const algoKey = mapping[val];
             if (algoKey) loadAlgorithmToEditor(algoKey);
